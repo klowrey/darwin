@@ -99,7 +99,7 @@ namespace Robot
 				P_VERSION					= 2,
 				P_ID						= 3,
 				P_BAUD_RATE					= 4,
-				P_RETURN_DELAY_TIME			= 5,			
+				P_RETURN_DELAY_TIME			= 5,
 				P_CW_ANGLE_LIMIT_L          = 6,
 				P_CW_ANGLE_LIMIT_H          = 7,
 				P_CCW_ANGLE_LIMIT_L         = 8,

@@ -726,3 +726,56 @@ void CM730::MakeBulkReadPacketWb()
 	m_BulkReadTxPacket[LENGTH] = (number * 3) + 3;
 }
 
+void CM730::MakeBulkReadPacketMPC()
+{
+	int number = 0;
+
+	m_BulkReadTxPacket[ID] = (unsigned char)ID_BROADCAST;
+	m_BulkReadTxPacket[INSTRUCTION] = INST_BULK_READ;
+	m_BulkReadTxPacket[PARAMETER] = (unsigned char)0x0;
+
+	if(Ping(CM730::ID_CM, 0) == SUCCESS)
+	{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 30;
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = CM730::ID_CM;
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER;
+		number++;
+	}
+
+ 	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
+	const int MPC_READ_LENGTH = 10;
+
+	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
+	{
+		if(MotionStatus::m_CurrentJoints.GetEnable(id))
+		{
+			m_BulkReadTxPacket[PARAMETER+3*number+1] = MPC_READ_LENGTH;
+			m_BulkReadTxPacket[PARAMETER+3*number+2] = id;	// id
+			m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_TORQUE_LIMIT_L; // start address
+			number++;
+		}
+	}
+
+	/*
+		if(Ping(FSR::ID_L_FSR, 0) == SUCCESS)
+		{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 10;               // length
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = FSR::ID_L_FSR;   // id
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = FSR::P_FSR1_L;    // start address
+		number++;
+		}
+
+		if(Ping(FSR::ID_R_FSR, 0) == SUCCESS)
+		{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 10;               // length
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = FSR::ID_R_FSR;   // id
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = FSR::P_FSR1_L;    // start address
+		number++;
+		}
+		*/
+
+	m_BulkReadTxPacket[LENGTH] = (number * 3) + 3;
+
+	// 29*3 + 3 = 90
+}
+
