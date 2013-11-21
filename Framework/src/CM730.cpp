@@ -445,6 +445,9 @@ int CM730::BulkRead()
 	}
 }
 
+// start_addr for each motor
+// each_length = number of things writing per motor (including id #)
+// number of motors
 int CM730::SyncWrite(int start_addr, int each_length, int number, int *pParam)
 {
 	unsigned char txpacket[MAXNUM_TXPARAM + 10] = {0, };
@@ -742,7 +745,7 @@ void CM730::MakeBulkReadPacketMPC()
 		number++;
 	}
 
- 	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
+	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
 	const int MPC_READ_LENGTH = 10;
 
 	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
