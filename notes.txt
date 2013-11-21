@@ -1,0 +1,61 @@
+Simple loop:
+
+BulkRead
+Mirror right positions to left positions
+SyncWrite
+
+Result:
+
+Mean: 7.326796 ms, Stdev: 0.487358
+Mean: 7.228035 ms, Stdev: 0.494731
+Mean: 6.857239 ms, Stdev: 0.068867
+Mean: 6.864744 ms, Stdev: 0.057576
+Mean: 6.876508 ms, Stdev: 0.017129
+Mean: 7.140237 ms, Stdev: 0.449653
+Mean: 7.853761 ms, Stdev: 0.117570
+Mean: 6.901906 ms, Stdev: 0.289265
+Mean: 6.856760 ms, Stdev: 0.016954
+Mean: 6.873403 ms, Stdev: 0.036299
+Mean: 6.885338 ms, Stdev: 0.097564
+Mean: 7.713670 ms, Stdev: 0.337792
+Mean: 7.749871 ms, Stdev: 0.327931
+Mean: 6.827924 ms, Stdev: 0.190528
+Mean: 6.864321 ms, Stdev: 0.020593
+Mean: 6.875870 ms, Stdev: 0.035348
+Mean: 6.929242 ms, Stdev: 0.231069
+Mean: 7.809415 ms, Stdev: 0.464223
+Mean: 7.147169 ms, Stdev: 0.451712
+Mean: 6.870905 ms, Stdev: 0.015499
+Mean: 6.884471 ms, Stdev: 0.013525
+Mean: 6.885629 ms, Stdev: 0.033709
+Mean: 6.882723 ms, Stdev: 0.026731
+Mean: 7.561802 ms, Stdev: 0.461592
+Mean: 6.897401 ms, Stdev: 0.169950
+Mean: 6.868505 ms, Stdev: 0.011767
+Mean: 6.881398 ms, Stdev: 0.016193
+Mean: 6.880213 ms, Stdev: 0.034669
+Mean: 6.882347 ms, Stdev: 0.044243
+Mean: 6.972569 ms, Stdev: 0.253155
+Mean: 6.974358 ms, Stdev: 0.303929
+Mean: 6.867678 ms, Stdev: 0.022560
+Mean: 6.880874 ms, Stdev: 0.014404
+Mean: 6.883822 ms, Stdev: 0.035646
+Mean: 7.847299 ms, Stdev: 0.145237
+Mean: 7.527266 ms, Stdev: 0.481572
+Mean: 6.868220 ms, Stdev: 0.012352
+Mean: 6.875068 ms, Stdev: 0.039529
+Mean: 6.883421 ms, Stdev: 0.020868
+
+
+
+NEXT TEST: Increasing Write packet size, making sure BulkRead gets
+all the useful data like torque limites, voltage, temp, etc
+
+
+BulkRead
+Mirror right positions to left positions
+and vise-versa
+Set DIP values to be useful / fill
+SyncWrite
+
+
