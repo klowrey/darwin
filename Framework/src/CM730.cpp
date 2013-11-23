@@ -756,29 +756,28 @@ void CM730::MakeBulkReadPacketMPC()
 			m_BulkReadTxPacket[PARAMETER+3*number+2] = id;	// id
 			m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_TORQUE_LIMIT_L; // start address
 			number++;
-		}
-	}
+			}
+			}
 
-	/*
-		if(Ping(FSR::ID_L_FSR, 0) == SUCCESS)
-		{
+	if(Ping(FSR::ID_L_FSR, 0) == SUCCESS)
+	{
 		m_BulkReadTxPacket[PARAMETER+3*number+1] = 10;               // length
 		m_BulkReadTxPacket[PARAMETER+3*number+2] = FSR::ID_L_FSR;   // id
 		m_BulkReadTxPacket[PARAMETER+3*number+3] = FSR::P_FSR1_L;    // start address
 		number++;
-		}
+	}
 
-		if(Ping(FSR::ID_R_FSR, 0) == SUCCESS)
-		{
+	if(Ping(FSR::ID_R_FSR, 0) == SUCCESS)
+	{
 		m_BulkReadTxPacket[PARAMETER+3*number+1] = 10;               // length
 		m_BulkReadTxPacket[PARAMETER+3*number+2] = FSR::ID_R_FSR;   // id
 		m_BulkReadTxPacket[PARAMETER+3*number+3] = FSR::P_FSR1_L;    // start address
 		number++;
-		}
-		*/
+	}
 
 	m_BulkReadTxPacket[LENGTH] = (number * 3) + 3;
+	printf("MPC BulkRead Packet == %d\n", number*3 + 3);
 
-	// 29*3 + 3 = 90
+	// 20*3 + 3 = 90
 }
 

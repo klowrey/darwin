@@ -10,68 +10,68 @@ const char *GetIDString(int id)
 {
 	switch(id)
 	{
-	case JointData::ID_R_SHOULDER_PITCH:
-		return "R_SHOULDER_PITCH";
+		case JointData::ID_R_SHOULDER_PITCH:
+			return "R_SHOULDER_PITCH";
 
-	case JointData::ID_L_SHOULDER_PITCH:
-		return "L_SHOULDER_PITCH";
+		case JointData::ID_L_SHOULDER_PITCH:
+			return "L_SHOULDER_PITCH";
 
-	case JointData::ID_R_SHOULDER_ROLL:
-		return "R_SHOULDER_ROLL";
+		case JointData::ID_R_SHOULDER_ROLL:
+			return "R_SHOULDER_ROLL";
 
-	case JointData::ID_L_SHOULDER_ROLL:
-		return "L_SHOULDER_ROLL";
+		case JointData::ID_L_SHOULDER_ROLL:
+			return "L_SHOULDER_ROLL";
 
-	case JointData::ID_R_ELBOW:
-		return "R_ELBOW";
+		case JointData::ID_R_ELBOW:
+			return "R_ELBOW";
 
-	case JointData::ID_L_ELBOW:
-		return "L_ELBOW";
+		case JointData::ID_L_ELBOW:
+			return "L_ELBOW";
 
-	case JointData::ID_R_HIP_YAW:
-		return "R_HIP_YAW";
+		case JointData::ID_R_HIP_YAW:
+			return "R_HIP_YAW";
 
-	case JointData::ID_L_HIP_YAW:
-		return "L_HIP_YAW";
+		case JointData::ID_L_HIP_YAW:
+			return "L_HIP_YAW";
 
-	case JointData::ID_R_HIP_ROLL:
-		return "R_HIP_ROLL";
+		case JointData::ID_R_HIP_ROLL:
+			return "R_HIP_ROLL";
 
-	case JointData::ID_L_HIP_ROLL:
-		return "L_HIP_ROLL";
+		case JointData::ID_L_HIP_ROLL:
+			return "L_HIP_ROLL";
 
-	case JointData::ID_R_HIP_PITCH:
-		return "R_HIP_PITCH";
+		case JointData::ID_R_HIP_PITCH:
+			return "R_HIP_PITCH";
 
-	case JointData::ID_L_HIP_PITCH:
-		return "L_HIP_PITCH";
+		case JointData::ID_L_HIP_PITCH:
+			return "L_HIP_PITCH";
 
-	case JointData::ID_R_KNEE:
-		return "R_KNEE";
+		case JointData::ID_R_KNEE:
+			return "R_KNEE";
 
-	case JointData::ID_L_KNEE:
-		return "L_KNEE";
+		case JointData::ID_L_KNEE:
+			return "L_KNEE";
 
-	case JointData::ID_R_ANKLE_PITCH:
-		return "R_ANKLE_PITCH";
+		case JointData::ID_R_ANKLE_PITCH:
+			return "R_ANKLE_PITCH";
 
-	case JointData::ID_L_ANKLE_PITCH:
-		return "L_ANKLE_PITCH";
+		case JointData::ID_L_ANKLE_PITCH:
+			return "L_ANKLE_PITCH";
 
-	case JointData::ID_R_ANKLE_ROLL:
-		return "R_ANKLE_ROLL";
+		case JointData::ID_R_ANKLE_ROLL:
+			return "R_ANKLE_ROLL";
 
-	case JointData::ID_L_ANKLE_ROLL:
-		return "L_ANKLE_ROLL";
+		case JointData::ID_L_ANKLE_ROLL:
+			return "L_ANKLE_ROLL";
 
-	case JointData::ID_HEAD_PAN:
-		return "HEAD_PAN";
+		case JointData::ID_HEAD_PAN:
+			return "HEAD_PAN";
 
-	case JointData::ID_HEAD_TILT:
-		return "HEAD_TILT";
+		case JointData::ID_HEAD_TILT:
+			return "HEAD_TILT";
 
-	case CM730::ID_CM:
-		return "SUB_BOARD";
+		case CM730::ID_CM:
+			return "SUB_BOARD";
 	}
 
 	return "UNKNOWN";
@@ -103,16 +103,16 @@ void Scan(CM730 *cm730)
 
 	for(int id=1; id<254; id++)
 	{
-        if(cm730->Ping(id, 0) == CM730::SUCCESS)
-        {
-            printf("                                  ... OK\r");
-            printf(" Check ID:%d(%s)\n", id, GetIDString(id));
-        }
-        else if(id < JointData::NUMBER_OF_JOINTS || id == CM730::ID_CM)
-        {
-            printf("                                  ... FAIL\r");
-            printf(" Check ID:%d(%s)\n", id, GetIDString(id));
-        }
+		if(cm730->Ping(id, 0) == CM730::SUCCESS)
+		{
+			printf("                                  ... OK\r");
+			printf(" Check ID:%d(%s)\n", id, GetIDString(id));
+		}
+		else if(id < JointData::NUMBER_OF_JOINTS || id == CM730::ID_CM)
+		{
+			printf("                                  ... FAIL\r");
+			printf(" Check ID:%d(%s)\n", id, GetIDString(id));
+		}
 	}
 
 	printf("\n");
@@ -171,8 +171,8 @@ void Dump(CM730 *cm730, int id)
 		printf( " ACCEL_Y                 (R) [%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
 		addr = CM730::P_ACCEL_Z_L; value = CM730::MakeWord(table[addr], table[addr+1]);
 		printf( " ACCEL_Z                 (R) [%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
-        addr = CM730::P_VOLTAGE; value = table[addr];
-        printf( " VOLTAGE                 (R) [%.3d]:%5d\n", addr, value);
+		addr = CM730::P_VOLTAGE; value = table[addr];
+		printf( " VOLTAGE                 (R) [%.3d]:%5d\n", addr, value);
 		addr = CM730::P_LEFT_MIC_L; value = CM730::MakeWord(table[addr], table[addr+1]);
 		printf( " LEFT_MIC                (R) [%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
 		addr = CM730::P_RIGHT_MIC_L; value = CM730::MakeWord(table[addr], table[addr+1]);
@@ -234,14 +234,14 @@ void Dump(CM730 *cm730, int id)
 		addr = MX28::P_CCW_COMPLIANCE_SLOPE; value = table[addr];
 		printf( " CCW_COMPLIANCE_SLOPE   (R/W)[%.3d]:%5d\n", addr, value);
 #else
-        addr = MX28::P_D_GAIN; value = table[addr];
-        printf( " D_GAIN                 (R/W)[%.3d]:%5d\n", addr, value);
-        addr = MX28::P_I_GAIN; value = table[addr];
-        printf( " I_GAIN                 (R/W)[%.3d]:%5d\n", addr, value);
-        addr = MX28::P_P_GAIN; value = table[addr];
-        printf( " P_GAIN                 (R/W)[%.3d]:%5d\n", addr, value);
-        addr = MX28::P_RESERVED; value = table[addr];
-        printf( " RESERVED               (R/W)[%.3d]:%5d\n", addr, value);
+		addr = MX28::P_D_GAIN; value = table[addr];
+		printf( " D_GAIN                 (R/W)[%.3d]:%5d\n", addr, value);
+		addr = MX28::P_I_GAIN; value = table[addr];
+		printf( " I_GAIN                 (R/W)[%.3d]:%5d\n", addr, value);
+		addr = MX28::P_P_GAIN; value = table[addr];
+		printf( " P_GAIN                 (R/W)[%.3d]:%5d\n", addr, value);
+		addr = MX28::P_RESERVED; value = table[addr];
+		printf( " RESERVED               (R/W)[%.3d]:%5d\n", addr, value);
 #endif
 		addr = MX28::P_GOAL_POSITION_L; value = CM730::MakeWord(table[addr], table[addr+1]);
 		printf( " GOAL_POSITION          (R/W)[%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
@@ -321,92 +321,92 @@ void Reset(Robot::CM730 *cm730, int id)
 
 		switch(id)
 		{
-		case JointData::ID_R_SHOULDER_ROLL:
-			cwLimit = -75.0;
-			ccwLimit = 135.0;
-			break;
+			case JointData::ID_R_SHOULDER_ROLL:
+				cwLimit = -75.0;
+				ccwLimit = 135.0;
+				break;
 
-		case JointData::ID_L_SHOULDER_ROLL:
-			cwLimit = -135.0;
-			ccwLimit = 75.0;
-			break;
+			case JointData::ID_L_SHOULDER_ROLL:
+				cwLimit = -135.0;
+				ccwLimit = 75.0;
+				break;
 
-		case JointData::ID_R_ELBOW:
-			cwLimit = -95.0;
-			ccwLimit = 70.0;
-			break;
+			case JointData::ID_R_ELBOW:
+				cwLimit = -95.0;
+				ccwLimit = 70.0;
+				break;
 
-		case JointData::ID_L_ELBOW:
-			cwLimit = -70.0;
-			ccwLimit = 95.0;
-			break;
+			case JointData::ID_L_ELBOW:
+				cwLimit = -70.0;
+				ccwLimit = 95.0;
+				break;
 
-		case JointData::ID_R_HIP_YAW:
-            cwLimit = -123.0;
-            ccwLimit = 53.0;
-            break;
+			case JointData::ID_R_HIP_YAW:
+				cwLimit = -123.0;
+				ccwLimit = 53.0;
+				break;
 
-		case JointData::ID_L_HIP_YAW:
-			cwLimit = -53.0;
-			ccwLimit = 123.0;
-			break;
+			case JointData::ID_L_HIP_YAW:
+				cwLimit = -53.0;
+				ccwLimit = 123.0;
+				break;
 
-		case JointData::ID_R_HIP_ROLL:
-			cwLimit = -45.0;
-			ccwLimit = 59.0;
-			break;
+			case JointData::ID_R_HIP_ROLL:
+				cwLimit = -45.0;
+				ccwLimit = 59.0;
+				break;
 
-		case JointData::ID_L_HIP_ROLL:
-			cwLimit = -59.0;
-			ccwLimit = 45.0;
-			break;
+			case JointData::ID_L_HIP_ROLL:
+				cwLimit = -59.0;
+				ccwLimit = 45.0;
+				break;
 
-		case JointData::ID_R_HIP_PITCH:
-			cwLimit = -100.0;
-			ccwLimit = 29.0;
-			break;
+			case JointData::ID_R_HIP_PITCH:
+				cwLimit = -100.0;
+				ccwLimit = 29.0;
+				break;
 
-		case JointData::ID_L_HIP_PITCH:
-			cwLimit = -29.0;
-			ccwLimit = 100.0;
-			break;
+			case JointData::ID_L_HIP_PITCH:
+				cwLimit = -29.0;
+				ccwLimit = 100.0;
+				break;
 
-		case JointData::ID_R_KNEE:
-			cwLimit = -6.0;
-			ccwLimit = 130.0;
-			break;
+			case JointData::ID_R_KNEE:
+				cwLimit = -6.0;
+				ccwLimit = 130.0;
+				break;
 
-		case JointData::ID_L_KNEE:
-			cwLimit = -130.0;
-			ccwLimit = 6.0;
-			break;
+			case JointData::ID_L_KNEE:
+				cwLimit = -130.0;
+				ccwLimit = 6.0;
+				break;
 
-		case JointData::ID_R_ANKLE_PITCH:
-			cwLimit = -72.0;
-			ccwLimit = 80.0;
-			break;
+			case JointData::ID_R_ANKLE_PITCH:
+				cwLimit = -72.0;
+				ccwLimit = 80.0;
+				break;
 
-		case JointData::ID_L_ANKLE_PITCH:
-			cwLimit = -80.0;
-			ccwLimit = 72.0;
-			break;
+			case JointData::ID_L_ANKLE_PITCH:
+				cwLimit = -80.0;
+				ccwLimit = 72.0;
+				break;
 
-		case JointData::ID_R_ANKLE_ROLL:
-			cwLimit = -44.0;
-			ccwLimit = 63.0;
-			break;
+			case JointData::ID_R_ANKLE_ROLL:
+				cwLimit = -44.0;
+				ccwLimit = 63.0;
+				break;
 
-		case JointData::ID_L_ANKLE_ROLL:
-			cwLimit = -63.0;
-			ccwLimit = 44.0;
-			break;
+			case JointData::ID_L_ANKLE_ROLL:
+				cwLimit = -63.0;
+				ccwLimit = 44.0;
+				break;
 
-		case JointData::ID_HEAD_TILT:
-			cwLimit = -25.0;
-			ccwLimit = 55.0;
-			break;
+			case JointData::ID_HEAD_TILT:
+				cwLimit = -25.0;
+				ccwLimit = 55.0;
+				break;
 		}
-		
+
 		FailCount = 0;
 		while(1)
 		{
@@ -536,6 +536,11 @@ void Write(Robot::CM730 *cm730, int id, int addr, int value)
 	int res;
 	if(id == CM730::ID_CM)
 	{
+		if (addr == MX28::P_BAUD_RATE) {
+			printf("Attempting to change CM730's Baud Rate\n");
+			cm730->ChangeBaud(value);
+		}
+
 		if(addr >= CM730::MAXNUM_ADDRESS)
 		{
 			printf( " Invalid address\n");
@@ -543,7 +548,7 @@ void Write(Robot::CM730 *cm730, int id, int addr, int value)
 		}
 
 		if(addr == CM730::P_DXL_POWER
-			|| addr == CM730::P_LED_PANNEL)
+				|| addr == CM730::P_LED_PANNEL)
 		{
 			res = cm730->WriteByte(addr, value, &error);
 		}
@@ -562,37 +567,37 @@ void Write(Robot::CM730 *cm730, int id, int addr, int value)
 
 		if(addr == MX28::P_ID)
 		{
-		    if(cm730->Ping(value, 0) == CM730::SUCCESS)
-		    {
-		        printf( " Can not change the ID. ID[%d] is in use.. \n", value);
-		        return;
-		    }
-		    else
-		    {
-		        res = cm730->WriteByte(id, addr, value, &error);
-		        gID = value;
-		    }
+			if(cm730->Ping(value, 0) == CM730::SUCCESS)
+			{
+				printf( " Can not change the ID. ID[%d] is in use.. \n", value);
+				return;
+			}
+			else
+			{
+				res = cm730->WriteByte(id, addr, value, &error);
+				gID = value;
+			}
 		}
 		else if(addr == MX28::P_HIGH_LIMIT_TEMPERATURE
-            || addr == MX28::P_LOW_LIMIT_VOLTAGE
-            || addr == MX28::P_HIGH_LIMIT_VOLTAGE
-            || addr == MX28::P_ALARM_LED
-            || addr == MX28::P_ALARM_SHUTDOWN
-            || addr == MX28::P_TORQUE_ENABLE
-            || addr == MX28::P_LED
+				|| addr == MX28::P_LOW_LIMIT_VOLTAGE
+				|| addr == MX28::P_HIGH_LIMIT_VOLTAGE
+				|| addr == MX28::P_ALARM_LED
+				|| addr == MX28::P_ALARM_SHUTDOWN
+				|| addr == MX28::P_TORQUE_ENABLE
+				|| addr == MX28::P_LED
 #ifdef MX28_1024
-            || addr == MX28::P_CW_COMPLIANCE_MARGIN
-            || addr == MX28::P_CCW_COMPLIANCE_MARGIN
-            || addr == MX28::P_CW_COMPLIANCE_SLOPE
-            || addr == MX28::P_CCW_COMPLIANCE_SLOPE
+				|| addr == MX28::P_CW_COMPLIANCE_MARGIN
+				|| addr == MX28::P_CCW_COMPLIANCE_MARGIN
+				|| addr == MX28::P_CW_COMPLIANCE_SLOPE
+				|| addr == MX28::P_CCW_COMPLIANCE_SLOPE
 #else
-			|| addr == MX28::P_P_GAIN
-			|| addr == MX28::P_I_GAIN
-			|| addr == MX28::P_D_GAIN
-			|| addr == MX28::P_RESERVED
+				|| addr == MX28::P_P_GAIN
+				|| addr == MX28::P_I_GAIN
+				|| addr == MX28::P_D_GAIN
+				|| addr == MX28::P_RESERVED
 #endif
-			|| addr == MX28::P_LED
-			|| addr == MX28::P_LED)
+				|| addr == MX28::P_LED
+				|| addr == MX28::P_LED)
 		{
 			res = cm730->WriteByte(id, addr, value, &error);
 		}
@@ -601,6 +606,13 @@ void Write(Robot::CM730 *cm730, int id, int addr, int value)
 			res = cm730->WriteWord(id, addr, value, &error);
 		}
 	}
+
+	/*
+		if(id == CM730::ID_CM && addr == MX28::P_BAUD_RATE) {
+		printf("Attempting to change CM730's Baud Rate\n");
+		cm730->ChangeBaud(value);
+		}
+		*/
 
 	if(res != CM730::SUCCESS)
 	{
@@ -613,9 +625,6 @@ void Write(Robot::CM730 *cm730, int id, int addr, int value)
 		printf( " Access or range error!\n");
 		return;
 	}
-
-	if(id == CM730::ID_CM && addr == MX28::P_BAUD_RATE)
-	    cm730->ChangeBaud(value);
 
 	printf(" Writing successful!\n");
 }

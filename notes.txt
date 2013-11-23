@@ -59,3 +59,9 @@ Set DIP values to be useful / fill
 SyncWrite
 
 
+
+NEXT TEST: Place bulkread / syncwrite cycle into a module within motionmanager
+NEXT TEST: LowLatency kernel
+NEXT TEST: NO gyro and accel data, only motors 
+
+

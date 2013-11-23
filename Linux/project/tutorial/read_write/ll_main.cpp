@@ -47,15 +47,18 @@ int main()
 	cm730.WriteWord(JointData::ID_R_SHOULDER_ROLL,  MX28::P_TORQUE_ENABLE, 0, 0);
 	cm730.WriteWord(JointData::ID_R_ELBOW,          MX28::P_TORQUE_ENABLE, 0, 0);
 
-	cm730.WriteByte(JointData::ID_L_SHOULDER_PITCH, MX28::P_P_GAIN, 5, 0);
-	cm730.WriteByte(JointData::ID_L_SHOULDER_ROLL,  MX28::P_P_GAIN, 5, 0);
-	cm730.WriteByte(JointData::ID_L_ELBOW,          MX28::P_P_GAIN, 5, 0);
+	//cm730.WriteByte(JointData::ID_L_SHOULDER_PITCH, MX28::P_P_GAIN, 5, 0);
+	//cm730.WriteByte(JointData::ID_L_SHOULDER_ROLL,  MX28::P_P_GAIN, 5, 0);
+	//cm730.WriteByte(JointData::ID_L_ELBOW,          MX28::P_P_GAIN, 5, 0);
 
 	int count = 0;
 	static struct timespec start_time;
-	static struct timespec end_time;
-	std::vector<double> timings;
-	clockid_t TEST_CLOCK = CLOCK_THREAD_CPUTIME_ID; //CLOCK_MONOTONIC;
+	static struct timespec read_time;
+	static struct timespec write_time;
+	std::vector<double> r_time;
+	std::vector<double> w_time;
+	clockid_t TEST_CLOCK = CLOCK_MONOTONIC;
+
 	while(1)
 	{
 		clock_gettime(TEST_CLOCK, &start_time);
@@ -64,6 +67,7 @@ int main()
 		if (cm730.BulkRead() == CM730::SUCCESS) {
 			//int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
 			//int param[(JointData::NUMBER_OF_JOINTS-2) * MX28::PARAM_BYTES];
+			clock_gettime(TEST_CLOCK, &read_time);
 			int ctrl_joints = 9;
 			int param[ctrl_joints * MX28::PARAM_BYTES];
 			int n = 0;
@@ -81,35 +85,38 @@ int main()
 			}
 
 			/*
-			id = JointData::ID_L_SHOULDER_PITCH;
-			value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
-			value = MX28::GetMirrorValue(value);
-			param[n++] = id;
-			param[n++] = CM730::GetLowByte(value);
-			param[n++] = CM730::GetHighByte(value);
-			joint_num++;
+				id = JointData::ID_L_SHOULDER_PITCH;
+				value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
+				value = MX28::GetMirrorValue(value);
+				param[n++] = id;
+				param[n++] = CM730::GetLowByte(value);
+				param[n++] = CM730::GetHighByte(value);
+				joint_num++;
 
-			id = JointData::ID_L_SHOULDER_ROLL;
-			value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
-			value = MX28::GetMirrorValue(value);
-			param[n++] = id;
-			param[n++] = CM730::GetLowByte(value);
-			param[n++] = CM730::GetHighByte(value);
-			joint_num++;
+				id = JointData::ID_L_SHOULDER_ROLL;
+				value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
+				value = MX28::GetMirrorValue(value);
+				param[n++] = id;
+				param[n++] = CM730::GetLowByte(value);
+				param[n++] = CM730::GetHighByte(value);
+				joint_num++;
 
-			id = JointData::ID_L_ELBOW;
-			value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
-			value = MX28::GetMirrorValue(value);
-			param[n++] = id;
-			param[n++] = CM730::GetLowByte(value);
-			param[n++] = CM730::GetHighByte(value);
-			joint_num++;
-			*/
+				id = JointData::ID_L_ELBOW;
+				value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
+				value = MX28::GetMirrorValue(value);
+				param[n++] = id;
+				param[n++] = CM730::GetLowByte(value);
+				param[n++] = CM730::GetHighByte(value);
+				joint_num++;
+				*/
 
 			if(joint_num > 0) {
 				//m_CM730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
 				cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 			}
+		}
+		else {
+			printf("Couldn't read data!\n");
 		}
 #else
 		if(cm730.ReadWord(JointData::ID_R_SHOULDER_PITCH, MX28::P_PRESENT_POSITION_L, &value, 0) == CM730::SUCCESS)
@@ -128,28 +135,36 @@ int main()
 		}
 #endif
 
-		clock_gettime(TEST_CLOCK, &end_time);
+		clock_gettime(TEST_CLOCK, &write_time);
 
-		double msec = ms_diff(start_time, end_time);
-		timings.push_back(msec);
+		r_time.push_back(ms_diff(start_time, read_time));
+		w_time.push_back(ms_diff(read_time, write_time));
 
 		count++;
 		if (count == 100) {
 			count = 0;
-			double sum = std::accumulate(timings.begin(), timings.end(), 0.0);
-			double mean = sum / timings.size();
+			double r_sum = std::accumulate(r_time.begin(), r_time.end(), 0.0);
+			double w_sum = std::accumulate(w_time.begin(), w_time.end(), 0.0);
+			double r_mean = r_sum / r_time.size();
+			double w_mean = w_sum / w_time.size();
 
-			std::vector<double> diff(timings.size());
-			std::transform(timings.begin(), timings.end(), diff.begin(), std::bind2nd(std::minus<double>(), mean));
-			double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-			double stdev = std::sqrt(sq_sum / timings.size());
+			std::vector<double> r_diff(r_time.size());
+			std::transform(r_time.begin(), r_time.end(), r_diff.begin(), std::bind2nd(std::minus<double>(), r_mean));
+			double sq_sum = std::inner_product(r_diff.begin(), r_diff.end(), r_diff.begin(), 0.0);
+			double r_stdev = std::sqrt(sq_sum / r_time.size());
 
-			printf("Mean: %f ms, Stdev: %f\n", mean, stdev);
-			if (stdev > 1.0) {
-				copy(timings.begin(), timings.end(), std::ostream_iterator<double>(std::cout, " "));
+			std::vector<double> w_diff(r_time.size());
+			std::transform(w_time.begin(), w_time.end(), w_diff.begin(), std::bind2nd(std::minus<double>(), w_mean));
+			sq_sum = std::inner_product(w_diff.begin(), w_diff.end(), w_diff.begin(), 0.0);
+			double w_stdev = std::sqrt(sq_sum / w_time.size());
+
+			printf("Read: %f ms, stdev: %f Write: %f ms, stdev: %f\n", r_mean, r_stdev, w_mean, w_stdev);
+			if ((r_stdev+w_stdev) > 1.0) {
+				copy(r_time.begin(), r_time.end(), std::ostream_iterator<double>(std::cout, " "));
 				printf("\n");
 			}
-			timings.clear();
+			r_time.clear();
+			w_time.clear();
 		}
 
 		//usleep(500);
