@@ -27,7 +27,7 @@ double ms_diff(timespec start, timespec end)
 
 #define SYNCED
 
-int main()
+int main(int argc, char* argv[])
 {
 	printf( "\n===== Read/Write Tutorial for DARwIn =====\n\n");
 
@@ -42,15 +42,34 @@ int main()
 	}
 	/////////////////////////////////////////////////////////////////////
 
-	int value;
-	cm730.WriteWord(JointData::ID_R_SHOULDER_PITCH, MX28::P_TORQUE_ENABLE, 0, 0);
-	cm730.WriteWord(JointData::ID_R_SHOULDER_ROLL,  MX28::P_TORQUE_ENABLE, 0, 0);
-	cm730.WriteWord(JointData::ID_R_ELBOW,          MX28::P_TORQUE_ENABLE, 0, 0);
+	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<=JointData::ID_L_ANKLE_ROLL; joint++) {
+	cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 0, 0);
+	}
+	//cm730.WriteWord(JointData::ID_R_SHOULDER_PITCH, MX28::P_TORQUE_ENABLE, 0, 0);
+	//cm730.WriteWord(JointData::ID_R_SHOULDER_ROLL,  MX28::P_TORQUE_ENABLE, 0, 0);
+	//cm730.WriteWord(JointData::ID_R_ELBOW,          MX28::P_TORQUE_ENABLE, 0, 0);
 
 	//cm730.WriteByte(JointData::ID_L_SHOULDER_PITCH, MX28::P_P_GAIN, 5, 0);
 	//cm730.WriteByte(JointData::ID_L_SHOULDER_ROLL,  MX28::P_P_GAIN, 5, 0);
 	//cm730.WriteByte(JointData::ID_L_ELBOW,          MX28::P_P_GAIN, 5, 0);
 
+	int p_gain = 10; 
+	int d_gain = 10;
+	if (argc >= 2) {
+		p_gain = atoi(argv[1]);	
+	}
+	if (argc >= 3) {
+		d_gain = atoi(argv[2]);	
+	}
+	
+	printf("P: %d, D: %d\n", p_gain, d_gain);
+
+	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<=JointData::ID_L_ANKLE_ROLL; joint++) {
+		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
+		cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
+	}
+
+	int value;
 	int count = 0;
 	static struct timespec start_time;
 	static struct timespec read_time;
@@ -85,29 +104,20 @@ int main()
 			}
 
 			/*
-				id = JointData::ID_L_SHOULDER_PITCH;
-				value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
+				for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<=JointData::ID_L_ANKLE_ROLL; joint++) {
+				value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+				if (joint % 2 == 0) {
+				id = joint-1;
+				}
+				else {
+				id = joint+1;
+				}
 				value = MX28::GetMirrorValue(value);
 				param[n++] = id;
 				param[n++] = CM730::GetLowByte(value);
 				param[n++] = CM730::GetHighByte(value);
 				joint_num++;
-
-				id = JointData::ID_L_SHOULDER_ROLL;
-				value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
-				value = MX28::GetMirrorValue(value);
-				param[n++] = id;
-				param[n++] = CM730::GetLowByte(value);
-				param[n++] = CM730::GetHighByte(value);
-				joint_num++;
-
-				id = JointData::ID_L_ELBOW;
-				value = cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L);
-				value = MX28::GetMirrorValue(value);
-				param[n++] = id;
-				param[n++] = CM730::GetLowByte(value);
-				param[n++] = CM730::GetHighByte(value);
-				joint_num++;
+				}
 				*/
 
 			if(joint_num > 0) {

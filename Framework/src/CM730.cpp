@@ -746,7 +746,8 @@ void CM730::MakeBulkReadPacketMPC()
 	}
 
 	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
-	const int MPC_READ_LENGTH = 10;
+	//const int MPC_READ_LENGTH = 10;
+	const int MPC_READ_LENGTH = 2;
 
 	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
 	{
@@ -754,10 +755,11 @@ void CM730::MakeBulkReadPacketMPC()
 		{
 			m_BulkReadTxPacket[PARAMETER+3*number+1] = MPC_READ_LENGTH;
 			m_BulkReadTxPacket[PARAMETER+3*number+2] = id;	// id
-			m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_TORQUE_LIMIT_L; // start address
+			//m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_TORQUE_LIMIT_L; // start address
+			m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_PRESENT_POSITION_L; // start address
 			number++;
-			}
-			}
+		}
+	}
 
 	if(Ping(FSR::ID_L_FSR, 0) == SUCCESS)
 	{
