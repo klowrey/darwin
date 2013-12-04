@@ -12,7 +12,7 @@ TARGET2 = test_read_write
 
 CXX = g++
 INCLUDE_DIRS = -I../../../include -I../../../../Framework/include
-CXXFLAGS +=	-O2 -DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
+CXXFLAGS +=	-O3 -DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
 LIBS += -lpthread -lrt
 
 OBJS =	main.o
