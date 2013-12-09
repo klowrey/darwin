@@ -201,6 +201,7 @@ namespace Robot
 			static int MakeColor(int red, int green, int blue);
 
 			void MakeBulkReadPacketMPC();
+			void MakeBulkReadPacketServo25();
 			// ***   WEBOTS PART  *** //
 
 			void MakeBulkReadPacketWb();

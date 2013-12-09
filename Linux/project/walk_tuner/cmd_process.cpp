@@ -36,29 +36,29 @@ int _getch()
 
 int kbhit(void)
 {
-  struct termios oldt, newt;
-  int ch;
-  int oldf;
+	struct termios oldt, newt;
+	int ch;
+	int oldf;
 
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-  fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-  ch = getchar();
+	ch = getchar();
 
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  fcntl(STDIN_FILENO, F_SETFL, oldf);
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	fcntl(STDIN_FILENO, F_SETFL, oldf);
 
-  if(ch != EOF)
-  {
-    ungetc(ch, stdin);
-    return 1;
-  }
+	if(ch != EOF)
+	{
+		ungetc(ch, stdin);
+		return 1;
+	}
 
-  return 0;
+	return 0;
 }
 
 struct termios oldterm, new_term;
@@ -158,18 +158,18 @@ void DrawIntro(CM730 *cm730)
 	}
 
 	cm730->SyncWrite(MX28::P_GOAL_POSITION_L, 5, JointData::NUMBER_OF_JOINTS - 1, param);
-	
+
 	int nrows, ncolumns;
-    setupterm(NULL, fileno(stdout), (int *)0);
-    nrows = tigetnum("lines");
-    ncolumns = tigetnum("cols");
+	setupterm(NULL, fileno(stdout), (int *)0);
+	nrows = tigetnum("lines");
+	ncolumns = tigetnum("cols");
 
 	system("clear");
 	printf("\n");
 	printf("[Walking Tuner for DARwIn %s]\n", PROGRAM_VERSION);
 	printf("\n");
 	printf(" *Terminal screen size must be %d(col)x%d(row).\n", SCREEN_COL, SCREEN_ROW);
-    printf(" *Current terminal has %d columns and %d rows.\n", ncolumns, nrows);
+	printf(" *Current terminal has %d columns and %d rows.\n", ncolumns, nrows);
 	printf("\n");
 	printf("\n");
 	printf("Press any key to start program...\n");
@@ -209,7 +209,7 @@ void DrawScreen()
 	printf("Auto balance(on/off)      \n"); // 8
 	printf("Period time(msec)         \n"); // 9
 	printf("DSP ratio                 \n"); // 0
-    printf("Step forward/back ratio   \n"); // 1
+	printf("Step forward/back ratio   \n"); // 1
 	printf("Step forward/back(mm)     \n"); // 2
 	printf("Step right/left(mm)       \n"); // 3
 	printf("Step direction(degree)    \n"); // 4
@@ -223,10 +223,10 @@ void DrawScreen()
 	printf("Balance ankle pitch gain  \n"); // 2
 	printf("Balance hip roll gain     \n"); // 3
 	printf("Balance ankle roll gain   \n"); // 4
-    printf("P gain                    \n"); // 5
-    printf("I gain                    \n"); // 6
-    printf("D gain                    \n"); // 7
-    ClearCmd(); // 8
+	printf("P gain                    \n"); // 5
+	printf("I gain                    \n"); // 6
+	printf("D gain                    \n"); // 7
+	ClearCmd(); // 8
 
 	GoToCursor(PARAM_COL, WALKING_MODE_ROW);
 	if(Walking::GetInstance()->IsRunning() == true)
@@ -267,8 +267,8 @@ void DrawScreen()
 	GoToCursor(PARAM_COL, DSP_RATIO_ROW);
 	printf("%.2f    ", Walking::GetInstance()->DSP_RATIO);
 
-    GoToCursor(PARAM_COL, STEP_FORWARDBACK_RATIO_ROW);
-    printf("%.2f    ", Walking::GetInstance()->STEP_FB_RATIO);
+	GoToCursor(PARAM_COL, STEP_FORWARDBACK_RATIO_ROW);
+	printf("%.2f    ", Walking::GetInstance()->STEP_FB_RATIO);
 
 	GoToCursor(PARAM_COL, STEP_FORWARDBACK_ROW);
 	printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
@@ -312,14 +312,14 @@ void DrawScreen()
 	GoToCursor(PARAM_COL, BAL_ANKLE_ROLL_GAIN_ROW);
 	printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN);
 
-    GoToCursor(PARAM_COL, P_GAIN_ROW);
-    printf("%d    ", Walking::GetInstance()->P_GAIN);
+	GoToCursor(PARAM_COL, P_GAIN_ROW);
+	printf("%d    ", Walking::GetInstance()->P_GAIN);
 
-    GoToCursor(PARAM_COL, I_GAIN_ROW);
-    printf("%d    ", Walking::GetInstance()->I_GAIN);
+	GoToCursor(PARAM_COL, I_GAIN_ROW);
+	printf("%d    ", Walking::GetInstance()->I_GAIN);
 
-    GoToCursor(PARAM_COL, D_GAIN_ROW);
-    printf("%d    ", Walking::GetInstance()->D_GAIN);
+	GoToCursor(PARAM_COL, D_GAIN_ROW);
+	printf("%d    ", Walking::GetInstance()->D_GAIN);
 
 	GoToCursor(old_col, old_row);
 }
@@ -363,221 +363,221 @@ void IncreaseValue(bool large)
 
 	switch(row)
 	{
-	case WALKING_MODE_ROW:
-	    MotionManager::GetInstance()->StartLogging();
-		Walking::GetInstance()->Start();
-		printf("ON    ");
-		break;
+		case WALKING_MODE_ROW:
+			MotionManager::GetInstance()->StartLogging();
+			Walking::GetInstance()->Start();
+			printf("ON    ");
+			break;
 
-	case X_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->X_OFFSET += 10;
-		else
-			Walking::GetInstance()->X_OFFSET += 1;
-		printf("%d    ", (int)Walking::GetInstance()->X_OFFSET);
-		break;
+		case X_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->X_OFFSET += 10;
+			else
+				Walking::GetInstance()->X_OFFSET += 1;
+			printf("%d    ", (int)Walking::GetInstance()->X_OFFSET);
+			break;
 
-	case Y_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_OFFSET += 10;
-		else
-			Walking::GetInstance()->Y_OFFSET += 1;
-		printf("%d    ", (int)Walking::GetInstance()->Y_OFFSET);
-		break;
+		case Y_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_OFFSET += 10;
+			else
+				Walking::GetInstance()->Y_OFFSET += 1;
+			printf("%d    ", (int)Walking::GetInstance()->Y_OFFSET);
+			break;
 
-	case Z_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->Z_OFFSET += 10;
-		else
-			Walking::GetInstance()->Z_OFFSET += 1;
-		printf("%d    ", (int)Walking::GetInstance()->Z_OFFSET);
-		break;
+		case Z_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->Z_OFFSET += 10;
+			else
+				Walking::GetInstance()->Z_OFFSET += 1;
+			printf("%d    ", (int)Walking::GetInstance()->Z_OFFSET);
+			break;
 
-	case ROLL_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->R_OFFSET += 1.0;
-		else
-			Walking::GetInstance()->R_OFFSET += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->R_OFFSET);
-		break;
+		case ROLL_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->R_OFFSET += 1.0;
+			else
+				Walking::GetInstance()->R_OFFSET += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->R_OFFSET);
+			break;
 
-	case PITCH_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->P_OFFSET += 1.0;
-		else
-			Walking::GetInstance()->P_OFFSET += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->P_OFFSET);
-		break;
+		case PITCH_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->P_OFFSET += 1.0;
+			else
+				Walking::GetInstance()->P_OFFSET += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->P_OFFSET);
+			break;
 
-	case YAW_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_OFFSET += 1.0;
-		else
-			Walking::GetInstance()->Y_OFFSET += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->Y_OFFSET);
-		break;
+		case YAW_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_OFFSET += 1.0;
+			else
+				Walking::GetInstance()->Y_OFFSET += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->Y_OFFSET);
+			break;
 
-	case HIP_PITCH_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->HIP_PITCH_OFFSET += 1.0;
-		else
-			Walking::GetInstance()->HIP_PITCH_OFFSET += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->HIP_PITCH_OFFSET);
-		break;
+		case HIP_PITCH_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->HIP_PITCH_OFFSET += 1.0;
+			else
+				Walking::GetInstance()->HIP_PITCH_OFFSET += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->HIP_PITCH_OFFSET);
+			break;
 
-	case AUTO_BALANCE_ROW:
-		Walking::GetInstance()->BALANCE_ENABLE = true;
-		printf("ON    ");
-		break;
+		case AUTO_BALANCE_ROW:
+			Walking::GetInstance()->BALANCE_ENABLE = true;
+			printf("ON    ");
+			break;
 
-	case PERIOD_TIME_ROW:
-		if(large == true)
-			Walking::GetInstance()->PERIOD_TIME += 10;
-		else
-			Walking::GetInstance()->PERIOD_TIME += 1;
-		printf("%d    ", (int)Walking::GetInstance()->PERIOD_TIME);
-		break;
+		case PERIOD_TIME_ROW:
+			if(large == true)
+				Walking::GetInstance()->PERIOD_TIME += 10;
+			else
+				Walking::GetInstance()->PERIOD_TIME += 1;
+			printf("%d    ", (int)Walking::GetInstance()->PERIOD_TIME);
+			break;
 
-	case DSP_RATIO_ROW:
-		if(large == true)
-			Walking::GetInstance()->DSP_RATIO += 0.1;
-		else
-			Walking::GetInstance()->DSP_RATIO += 0.01;
-		printf("%.2f    ", Walking::GetInstance()->DSP_RATIO);
-		break;
+		case DSP_RATIO_ROW:
+			if(large == true)
+				Walking::GetInstance()->DSP_RATIO += 0.1;
+			else
+				Walking::GetInstance()->DSP_RATIO += 0.01;
+			printf("%.2f    ", Walking::GetInstance()->DSP_RATIO);
+			break;
 
-    case STEP_FORWARDBACK_RATIO_ROW:
-        if(large == true)
-            Walking::GetInstance()->STEP_FB_RATIO += 0.1;
-        else
-            Walking::GetInstance()->STEP_FB_RATIO += 0.01;
-        printf("%.2f    ", Walking::GetInstance()->STEP_FB_RATIO);
-        break;
+		case STEP_FORWARDBACK_RATIO_ROW:
+			if(large == true)
+				Walking::GetInstance()->STEP_FB_RATIO += 0.1;
+			else
+				Walking::GetInstance()->STEP_FB_RATIO += 0.01;
+			printf("%.2f    ", Walking::GetInstance()->STEP_FB_RATIO);
+			break;
 
-	case STEP_FORWARDBACK_ROW:
-		if(large == true)
-			Walking::GetInstance()->X_MOVE_AMPLITUDE += 10;
-		else
-			Walking::GetInstance()->X_MOVE_AMPLITUDE += 1;
-		printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
-		break;
+		case STEP_FORWARDBACK_ROW:
+			if(large == true)
+				Walking::GetInstance()->X_MOVE_AMPLITUDE += 10;
+			else
+				Walking::GetInstance()->X_MOVE_AMPLITUDE += 1;
+			printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
+			break;
 
-	case STEP_RIGHTLEFT_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_MOVE_AMPLITUDE += 10;
-		else
-			Walking::GetInstance()->Y_MOVE_AMPLITUDE += 1;
-		printf("%d    ", (int)Walking::GetInstance()->Y_MOVE_AMPLITUDE);
-		break;
+		case STEP_RIGHTLEFT_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_MOVE_AMPLITUDE += 10;
+			else
+				Walking::GetInstance()->Y_MOVE_AMPLITUDE += 1;
+			printf("%d    ", (int)Walking::GetInstance()->Y_MOVE_AMPLITUDE);
+			break;
 
-	case STEP_DIRECTION_ROW:
-		if(large == true)
-			Walking::GetInstance()->A_MOVE_AMPLITUDE += 10;
-		else
-			Walking::GetInstance()->A_MOVE_AMPLITUDE += 1;
-		printf("%d    ", (int)Walking::GetInstance()->A_MOVE_AMPLITUDE);
-		break;
+		case STEP_DIRECTION_ROW:
+			if(large == true)
+				Walking::GetInstance()->A_MOVE_AMPLITUDE += 10;
+			else
+				Walking::GetInstance()->A_MOVE_AMPLITUDE += 1;
+			printf("%d    ", (int)Walking::GetInstance()->A_MOVE_AMPLITUDE);
+			break;
 
-	case TURNING_AIM_ROW:
-		Walking::GetInstance()->A_MOVE_AIM_ON = true;
-		printf("ON   ");
-		break;
+		case TURNING_AIM_ROW:
+			Walking::GetInstance()->A_MOVE_AIM_ON = true;
+			printf("ON   ");
+			break;
 
-	case FOOT_HEIGHT_ROW:
-		if(large == true)
-			Walking::GetInstance()->Z_MOVE_AMPLITUDE += 10;
-		else
-			Walking::GetInstance()->Z_MOVE_AMPLITUDE += 1;
-		printf("%d    ", (int)Walking::GetInstance()->Z_MOVE_AMPLITUDE);
-		break;
+		case FOOT_HEIGHT_ROW:
+			if(large == true)
+				Walking::GetInstance()->Z_MOVE_AMPLITUDE += 10;
+			else
+				Walking::GetInstance()->Z_MOVE_AMPLITUDE += 1;
+			printf("%d    ", (int)Walking::GetInstance()->Z_MOVE_AMPLITUDE);
+			break;
 
-	case SWING_RIGHTLEFT_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_SWAP_AMPLITUDE += 0.10;
-		else
-			Walking::GetInstance()->Y_SWAP_AMPLITUDE += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->Y_SWAP_AMPLITUDE);
-		break;
+		case SWING_RIGHTLEFT_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_SWAP_AMPLITUDE += 0.10;
+			else
+				Walking::GetInstance()->Y_SWAP_AMPLITUDE += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->Y_SWAP_AMPLITUDE);
+			break;
 
-	case SWING_TOPDOWN_ROW:
-		if(large == true)
-			Walking::GetInstance()->Z_SWAP_AMPLITUDE += 10;
-		else
-			Walking::GetInstance()->Z_SWAP_AMPLITUDE += 1;
-		printf("%d    ", (int)Walking::GetInstance()->Z_SWAP_AMPLITUDE);
-		break;
+		case SWING_TOPDOWN_ROW:
+			if(large == true)
+				Walking::GetInstance()->Z_SWAP_AMPLITUDE += 10;
+			else
+				Walking::GetInstance()->Z_SWAP_AMPLITUDE += 1;
+			printf("%d    ", (int)Walking::GetInstance()->Z_SWAP_AMPLITUDE);
+			break;
 
-	case PELVIS_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->PELVIS_OFFSET += 1.0;
-		else
-			Walking::GetInstance()->PELVIS_OFFSET += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->PELVIS_OFFSET);
-		break;
+		case PELVIS_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->PELVIS_OFFSET += 1.0;
+			else
+				Walking::GetInstance()->PELVIS_OFFSET += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->PELVIS_OFFSET);
+			break;
 
-	case ARM_SWING_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->ARM_SWING_GAIN += 0.10;
-		else
-			Walking::GetInstance()->ARM_SWING_GAIN += 0.1;
-		printf("%.1f    ", Walking::GetInstance()->ARM_SWING_GAIN);
-		break;
+		case ARM_SWING_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->ARM_SWING_GAIN += 0.10;
+			else
+				Walking::GetInstance()->ARM_SWING_GAIN += 0.1;
+			printf("%.1f    ", Walking::GetInstance()->ARM_SWING_GAIN);
+			break;
 
-	case BAL_KNEE_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_KNEE_GAIN += 0.1;
-		else
-			Walking::GetInstance()->BALANCE_KNEE_GAIN += 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_KNEE_GAIN);
-		break;
+		case BAL_KNEE_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_KNEE_GAIN += 0.1;
+			else
+				Walking::GetInstance()->BALANCE_KNEE_GAIN += 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_KNEE_GAIN);
+			break;
 
-	case BAL_ANKLE_PITCH_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN += 0.1;
-		else
-			Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN += 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN);
-		break;
+		case BAL_ANKLE_PITCH_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN += 0.1;
+			else
+				Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN += 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN);
+			break;
 
-	case BAL_HIP_ROLL_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN += 0.1;
-		else
-			Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN += 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN);
-		break;
+		case BAL_HIP_ROLL_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN += 0.1;
+			else
+				Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN += 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN);
+			break;
 
-	case BAL_ANKLE_ROLL_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN += 0.1;
-		else
-			Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN += 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN);
-		break;
+		case BAL_ANKLE_ROLL_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN += 0.1;
+			else
+				Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN += 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN);
+			break;
 
-    case P_GAIN_ROW:
-        if(large == true)
-            Walking::GetInstance()->P_GAIN += 10;
-        else
-            Walking::GetInstance()->P_GAIN += 1;
-        printf("%d    ", Walking::GetInstance()->P_GAIN);
-        break;
+		case P_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->P_GAIN += 10;
+			else
+				Walking::GetInstance()->P_GAIN += 1;
+			printf("%d    ", Walking::GetInstance()->P_GAIN);
+			break;
 
-    case I_GAIN_ROW:
-        if(large == true)
-            Walking::GetInstance()->I_GAIN += 10;
-        else
-            Walking::GetInstance()->I_GAIN += 1;
-        printf("%d    ", Walking::GetInstance()->I_GAIN);
-        break;
+		case I_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->I_GAIN += 10;
+			else
+				Walking::GetInstance()->I_GAIN += 1;
+			printf("%d    ", Walking::GetInstance()->I_GAIN);
+			break;
 
-    case D_GAIN_ROW:
-        if(large == true)
-            Walking::GetInstance()->D_GAIN += 10;
-        else
-            Walking::GetInstance()->D_GAIN += 1;
-        printf("%d    ", Walking::GetInstance()->D_GAIN);
-        break;
+		case D_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->D_GAIN += 10;
+			else
+				Walking::GetInstance()->D_GAIN += 1;
+			printf("%d    ", Walking::GetInstance()->D_GAIN);
+			break;
 	}
 
 	GoToCursor(col, row);
@@ -605,232 +605,232 @@ void DecreaseValue(bool large)
 
 	switch(row)
 	{
-	case WALKING_MODE_ROW:
-		Walking::GetInstance()->Stop();
-		MotionManager::GetInstance()->StopLogging();
-		printf("OFF");
-		GoToCursor(PARAM_COL, STEP_FORWARDBACK_ROW);
-		Walking::GetInstance()->X_MOVE_AMPLITUDE = 0;
-		printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
-		GoToCursor(PARAM_COL, STEP_RIGHTLEFT_ROW);
-		Walking::GetInstance()->Y_MOVE_AMPLITUDE = 0;
-		printf("%d    ", (int)Walking::GetInstance()->Y_MOVE_AMPLITUDE);
-		GoToCursor(PARAM_COL, STEP_DIRECTION_ROW);
-		Walking::GetInstance()->A_MOVE_AMPLITUDE = 0;
-		printf("%.1f    ", Walking::GetInstance()->A_MOVE_AMPLITUDE);
-		break;
+		case WALKING_MODE_ROW:
+			Walking::GetInstance()->Stop();
+			MotionManager::GetInstance()->StopLogging();
+			printf("OFF");
+			GoToCursor(PARAM_COL, STEP_FORWARDBACK_ROW);
+			Walking::GetInstance()->X_MOVE_AMPLITUDE = 0;
+			printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
+			GoToCursor(PARAM_COL, STEP_RIGHTLEFT_ROW);
+			Walking::GetInstance()->Y_MOVE_AMPLITUDE = 0;
+			printf("%d    ", (int)Walking::GetInstance()->Y_MOVE_AMPLITUDE);
+			GoToCursor(PARAM_COL, STEP_DIRECTION_ROW);
+			Walking::GetInstance()->A_MOVE_AMPLITUDE = 0;
+			printf("%.1f    ", Walking::GetInstance()->A_MOVE_AMPLITUDE);
+			break;
 
-	case X_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->X_OFFSET -= 10;
-		else
-			Walking::GetInstance()->X_OFFSET -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->X_OFFSET);
-		break;
+		case X_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->X_OFFSET -= 10;
+			else
+				Walking::GetInstance()->X_OFFSET -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->X_OFFSET);
+			break;
 
-	case Y_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_OFFSET -= 10;
-		else
-			Walking::GetInstance()->Y_OFFSET -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->Y_OFFSET);
-		break;
+		case Y_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_OFFSET -= 10;
+			else
+				Walking::GetInstance()->Y_OFFSET -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->Y_OFFSET);
+			break;
 
-	case Z_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->Z_OFFSET -= 10;
-		else
-			Walking::GetInstance()->Z_OFFSET -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->Z_OFFSET);
-		break;
+		case Z_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->Z_OFFSET -= 10;
+			else
+				Walking::GetInstance()->Z_OFFSET -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->Z_OFFSET);
+			break;
 
-	case ROLL_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->R_OFFSET -= 1.0;
-		else
-			Walking::GetInstance()->R_OFFSET -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->R_OFFSET);
-		break;
+		case ROLL_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->R_OFFSET -= 1.0;
+			else
+				Walking::GetInstance()->R_OFFSET -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->R_OFFSET);
+			break;
 
-	case PITCH_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->P_OFFSET -= 1.0;
-		else
-			Walking::GetInstance()->P_OFFSET -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->P_OFFSET);
-		break;
+		case PITCH_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->P_OFFSET -= 1.0;
+			else
+				Walking::GetInstance()->P_OFFSET -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->P_OFFSET);
+			break;
 
-	case YAW_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_OFFSET -= 1.0;
-		else
-			Walking::GetInstance()->Y_OFFSET -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->Y_OFFSET);
-		break;
+		case YAW_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_OFFSET -= 1.0;
+			else
+				Walking::GetInstance()->Y_OFFSET -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->Y_OFFSET);
+			break;
 
-	case HIP_PITCH_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->HIP_PITCH_OFFSET -= 1.0;
-		else
-			Walking::GetInstance()->HIP_PITCH_OFFSET -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->HIP_PITCH_OFFSET);
-		break;
+		case HIP_PITCH_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->HIP_PITCH_OFFSET -= 1.0;
+			else
+				Walking::GetInstance()->HIP_PITCH_OFFSET -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->HIP_PITCH_OFFSET);
+			break;
 
-	case AUTO_BALANCE_ROW:
-		Walking::GetInstance()->BALANCE_ENABLE = false;
-		printf("OFF   ");
-		break;
+		case AUTO_BALANCE_ROW:
+			Walking::GetInstance()->BALANCE_ENABLE = false;
+			printf("OFF   ");
+			break;
 
-	case PERIOD_TIME_ROW:
-		if(large == true)
-			Walking::GetInstance()->PERIOD_TIME -= 10;
-		else
-			Walking::GetInstance()->PERIOD_TIME -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->PERIOD_TIME);
-		break;
+		case PERIOD_TIME_ROW:
+			if(large == true)
+				Walking::GetInstance()->PERIOD_TIME -= 10;
+			else
+				Walking::GetInstance()->PERIOD_TIME -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->PERIOD_TIME);
+			break;
 
-	case DSP_RATIO_ROW:
-		if(large == true)
-			Walking::GetInstance()->DSP_RATIO -= 0.1;
-		else
-			Walking::GetInstance()->DSP_RATIO -= 0.01;
-		printf("%.2f    ", Walking::GetInstance()->DSP_RATIO);
-		break;
+		case DSP_RATIO_ROW:
+			if(large == true)
+				Walking::GetInstance()->DSP_RATIO -= 0.1;
+			else
+				Walking::GetInstance()->DSP_RATIO -= 0.01;
+			printf("%.2f    ", Walking::GetInstance()->DSP_RATIO);
+			break;
 
-    case STEP_FORWARDBACK_RATIO_ROW:
-        if(large == true)
-            Walking::GetInstance()->STEP_FB_RATIO -= 0.1;
-        else
-            Walking::GetInstance()->STEP_FB_RATIO -= 0.01;
-        printf("%.2f    ", Walking::GetInstance()->STEP_FB_RATIO);
-        break;
+		case STEP_FORWARDBACK_RATIO_ROW:
+			if(large == true)
+				Walking::GetInstance()->STEP_FB_RATIO -= 0.1;
+			else
+				Walking::GetInstance()->STEP_FB_RATIO -= 0.01;
+			printf("%.2f    ", Walking::GetInstance()->STEP_FB_RATIO);
+			break;
 
-	case STEP_FORWARDBACK_ROW:
-		if(large == true)
-			Walking::GetInstance()->X_MOVE_AMPLITUDE -= 10;
-		else
-			Walking::GetInstance()->X_MOVE_AMPLITUDE -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
-		break;
+		case STEP_FORWARDBACK_ROW:
+			if(large == true)
+				Walking::GetInstance()->X_MOVE_AMPLITUDE -= 10;
+			else
+				Walking::GetInstance()->X_MOVE_AMPLITUDE -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->X_MOVE_AMPLITUDE);
+			break;
 
-	case STEP_RIGHTLEFT_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_MOVE_AMPLITUDE -= 10;
-		else
-			Walking::GetInstance()->Y_MOVE_AMPLITUDE -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->Y_MOVE_AMPLITUDE);
-		break;
+		case STEP_RIGHTLEFT_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_MOVE_AMPLITUDE -= 10;
+			else
+				Walking::GetInstance()->Y_MOVE_AMPLITUDE -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->Y_MOVE_AMPLITUDE);
+			break;
 
-	case STEP_DIRECTION_ROW:
-		if(large == true)
-			Walking::GetInstance()->A_MOVE_AMPLITUDE -= 10;
-		else
-			Walking::GetInstance()->A_MOVE_AMPLITUDE -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->A_MOVE_AMPLITUDE);
-		break;
+		case STEP_DIRECTION_ROW:
+			if(large == true)
+				Walking::GetInstance()->A_MOVE_AMPLITUDE -= 10;
+			else
+				Walking::GetInstance()->A_MOVE_AMPLITUDE -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->A_MOVE_AMPLITUDE);
+			break;
 
-	case TURNING_AIM_ROW:
-		Walking::GetInstance()->A_MOVE_AIM_ON = false;
-		printf("OFF   ");
-		break;
+		case TURNING_AIM_ROW:
+			Walking::GetInstance()->A_MOVE_AIM_ON = false;
+			printf("OFF   ");
+			break;
 
-	case FOOT_HEIGHT_ROW:
-		if(large == true)
-			Walking::GetInstance()->Z_MOVE_AMPLITUDE -= 10;
-		else
-			Walking::GetInstance()->Z_MOVE_AMPLITUDE -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->Z_MOVE_AMPLITUDE);
-		break;
+		case FOOT_HEIGHT_ROW:
+			if(large == true)
+				Walking::GetInstance()->Z_MOVE_AMPLITUDE -= 10;
+			else
+				Walking::GetInstance()->Z_MOVE_AMPLITUDE -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->Z_MOVE_AMPLITUDE);
+			break;
 
-	case SWING_RIGHTLEFT_ROW:
-		if(large == true)
-			Walking::GetInstance()->Y_SWAP_AMPLITUDE -= 1.0;
-		else
-			Walking::GetInstance()->Y_SWAP_AMPLITUDE -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->Y_SWAP_AMPLITUDE);
-		break;
+		case SWING_RIGHTLEFT_ROW:
+			if(large == true)
+				Walking::GetInstance()->Y_SWAP_AMPLITUDE -= 1.0;
+			else
+				Walking::GetInstance()->Y_SWAP_AMPLITUDE -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->Y_SWAP_AMPLITUDE);
+			break;
 
-	case SWING_TOPDOWN_ROW:
-		if(large == true)
-			Walking::GetInstance()->Z_SWAP_AMPLITUDE -= 10;
-		else
-			Walking::GetInstance()->Z_SWAP_AMPLITUDE -= 1;
-		printf("%d    ", (int)Walking::GetInstance()->Z_SWAP_AMPLITUDE);
-		break;
+		case SWING_TOPDOWN_ROW:
+			if(large == true)
+				Walking::GetInstance()->Z_SWAP_AMPLITUDE -= 10;
+			else
+				Walking::GetInstance()->Z_SWAP_AMPLITUDE -= 1;
+			printf("%d    ", (int)Walking::GetInstance()->Z_SWAP_AMPLITUDE);
+			break;
 
-	case PELVIS_OFFSET_ROW:
-		if(large == true)
-			Walking::GetInstance()->PELVIS_OFFSET -= 1.0;
-		else
-			Walking::GetInstance()->PELVIS_OFFSET -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->PELVIS_OFFSET);
-		break;
+		case PELVIS_OFFSET_ROW:
+			if(large == true)
+				Walking::GetInstance()->PELVIS_OFFSET -= 1.0;
+			else
+				Walking::GetInstance()->PELVIS_OFFSET -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->PELVIS_OFFSET);
+			break;
 
-	case ARM_SWING_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->ARM_SWING_GAIN -= 1.0;
-		else
-			Walking::GetInstance()->ARM_SWING_GAIN -= 0.1;
-		printf("%.1f    ", Walking::GetInstance()->ARM_SWING_GAIN);
-		break;
+		case ARM_SWING_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->ARM_SWING_GAIN -= 1.0;
+			else
+				Walking::GetInstance()->ARM_SWING_GAIN -= 0.1;
+			printf("%.1f    ", Walking::GetInstance()->ARM_SWING_GAIN);
+			break;
 
-	case BAL_KNEE_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_KNEE_GAIN -= 0.1;
-		else
-			Walking::GetInstance()->BALANCE_KNEE_GAIN -= 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_KNEE_GAIN);
-		break;
+		case BAL_KNEE_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_KNEE_GAIN -= 0.1;
+			else
+				Walking::GetInstance()->BALANCE_KNEE_GAIN -= 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_KNEE_GAIN);
+			break;
 
-	case BAL_ANKLE_PITCH_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN -= 0.1;
-		else
-			Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN -= 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN);
-		break;
+		case BAL_ANKLE_PITCH_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN -= 0.1;
+			else
+				Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN -= 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_PITCH_GAIN);
+			break;
 
-	case BAL_HIP_ROLL_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN -= 0.1;
-		else
-			Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN -= 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN);
-		break;
+		case BAL_HIP_ROLL_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN -= 0.1;
+			else
+				Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN -= 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_HIP_ROLL_GAIN);
+			break;
 
-	case BAL_ANKLE_ROLL_GAIN_ROW:
-		if(large == true)
-			Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN -= 0.1;
-		else
-			Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN -= 0.01;
-		printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN);
-		break;
+		case BAL_ANKLE_ROLL_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN -= 0.1;
+			else
+				Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN -= 0.01;
+			printf("%.2f    ", Walking::GetInstance()->BALANCE_ANKLE_ROLL_GAIN);
+			break;
 
-	case P_GAIN_ROW:
-	    if(large == true)
-	        Walking::GetInstance()->P_GAIN -= 10;
-	    else
-	        Walking::GetInstance()->P_GAIN -= 1;
-	    printf("%d    ", Walking::GetInstance()->P_GAIN);
-	    break;
+		case P_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->P_GAIN -= 10;
+			else
+				Walking::GetInstance()->P_GAIN -= 1;
+			printf("%d    ", Walking::GetInstance()->P_GAIN);
+			break;
 
-    case I_GAIN_ROW:
-        if(large == true)
-            Walking::GetInstance()->I_GAIN -= 10;
-        else
-            Walking::GetInstance()->I_GAIN -= 1;
-        printf("%d    ", Walking::GetInstance()->I_GAIN);
-        break;
+		case I_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->I_GAIN -= 10;
+			else
+				Walking::GetInstance()->I_GAIN -= 1;
+			printf("%d    ", Walking::GetInstance()->I_GAIN);
+			break;
 
-    case D_GAIN_ROW:
-        if(large == true)
-            Walking::GetInstance()->D_GAIN -= 10;
-        else
-            Walking::GetInstance()->D_GAIN -= 1;
-        printf("%d    ", Walking::GetInstance()->D_GAIN);
-        break;
+		case D_GAIN_ROW:
+			if(large == true)
+				Walking::GetInstance()->D_GAIN -= 10;
+			else
+				Walking::GetInstance()->D_GAIN -= 1;
+			printf("%d    ", Walking::GetInstance()->D_GAIN);
+			break;
 	}
-	
+
 	GoToCursor(col, row);
 }
 

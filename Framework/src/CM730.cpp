@@ -204,6 +204,9 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 
 							break;
 						}
+						/*
+								res = RX_CORRUPT;
+						*/
 					}
 				}
 			}
@@ -255,6 +258,9 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 
 							break;
 						}
+						/*
+								res = RX_CORRUPT;
+						*/
 					}
 				}
 
@@ -330,8 +336,9 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 		else
 			res = TX_FAIL;		
 	}
-	else
+	else {
 		res = TX_CORRUPT;
+	}
 
 	if(DEBUG_PRINT == true)
 	{
@@ -759,6 +766,57 @@ void CM730::MakeBulkReadPacketMPC()
 			m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_PRESENT_POSITION_L; // start address
 			number++;
 		}
+	}
+
+	if(Ping(FSR::ID_L_FSR, 0) == SUCCESS)
+	{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 10;               // length
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = FSR::ID_L_FSR;   // id
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = FSR::P_FSR1_L;    // start address
+		number++;
+	}
+
+	if(Ping(FSR::ID_R_FSR, 0) == SUCCESS)
+	{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 10;               // length
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = FSR::ID_R_FSR;   // id
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = FSR::P_FSR1_L;    // start address
+		number++;
+	}
+
+	m_BulkReadTxPacket[LENGTH] = (number * 3) + 3;
+	printf("MPC BulkRead Packet == %d\n", number*3 + 3);
+
+	// 20*3 + 3 = 90
+}
+
+void CM730::MakeBulkReadPacketServo25()
+{
+	int number = 0;
+
+	m_BulkReadTxPacket[ID] = (unsigned char)ID_BROADCAST;
+	m_BulkReadTxPacket[INSTRUCTION] = INST_BULK_READ;
+	m_BulkReadTxPacket[PARAMETER] = (unsigned char)0x0;
+
+	if(Ping(CM730::ID_CM, 0) == SUCCESS)
+	{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 30;
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = CM730::ID_CM;
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER;
+		number++;
+	}
+
+	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
+	const int MPC_READ_LENGTH = 10;
+	//const int MPC_READ_LENGTH = 2;
+
+	if(MotionStatus::m_CurrentJoints.GetEnable(25))
+	{
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = MPC_READ_LENGTH;
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = 25;	// id
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_TORQUE_LIMIT_L; // start address
+		//m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_PRESENT_POSITION_L; // start address
+		number++;
 	}
 
 	if(Ping(FSR::ID_L_FSR, 0) == SUCCESS)

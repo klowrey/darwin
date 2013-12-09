@@ -10,6 +10,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <time.h>
 #include <sys/time.h>
 #include <linux/serial.h>
 #include <sys/ioctl.h>
@@ -56,6 +57,7 @@ bool LinuxCM730::OpenPort()
 	if(DEBUG_PRINT == true)
 		printf("\n%s open ", m_PortName);
 
+	//if((m_Socket_fd = open(m_PortName, O_RDWR|O_NOCTTY)) < 0)
 	if((m_Socket_fd = open(m_PortName, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0)
 		goto UART_OPEN_ERROR;
 
@@ -69,7 +71,7 @@ bool LinuxCM730::OpenPort()
 	newtio.c_oflag      = 0;
 	newtio.c_lflag      = 0;
 	newtio.c_cc[VTIME]  = 0;
-	newtio.c_cc[VMIN]   = 0;
+	newtio.c_cc[VMIN]   = 0; // 1 blocking, 0 nonblocking
 	tcsetattr(m_Socket_fd, TCSANOW, &newtio);
 
 	if(DEBUG_PRINT == true)
@@ -95,7 +97,9 @@ bool LinuxCM730::OpenPort()
 
 	tcflush(m_Socket_fd, TCIFLUSH);
 
+	// Why is there a * 8 in the other function?
 	m_ByteTransferTime = (1000.0 / baudrate) * 12.0;
+	//m_ByteTransferTime = (1000.0 / baudrate) * 12.0 * 8;
 
 	return true;
 
@@ -155,6 +159,19 @@ int LinuxCM730::WritePort(unsigned char* packet, int numPacket)
 
 int LinuxCM730::ReadPort(unsigned char* packet, int numPacket)
 {
+	/*
+	int ret = read(m_Socket_fd, packet, numPacket);
+
+	printf("%d\n", ret);
+	if (ret < 0) {
+		int err = errno;
+		if (err == EAGAIN) {
+			printf(" NON BLOCKING SERIAL \n");
+		}
+	}
+
+	return ret;
+	*/
 	return read(m_Socket_fd, packet, numPacket);
 }
 
@@ -198,10 +215,21 @@ void LinuxCM730::HighPriorityRelease()
 
 double LinuxCM730::GetCurrentTime()
 {
+	/*
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 
 	return ((double)tv.tv_sec*1000.0 + (double)tv.tv_usec/1000.0);
+	*/
+	static struct timespec ts;
+
+	//clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	//clock_gettime(CLOCK_REALTIME, &ts);
+	//clock_gettime(CLOCK_REALTIME_COARSE, &ts);
+
+	// returns milliseconds
+	return ((double)ts.tv_sec*1000.0 + (double)ts.tv_nsec/1000000.0);
 }
 
 void LinuxCM730::SetPacketTimeout(int lenPacket)
@@ -222,9 +250,11 @@ double LinuxCM730::GetPacketTime()
 {
 	double time;
 
-	time = GetCurrentTime() - m_PacketStartTime;
+	double curTime = GetCurrentTime();
+
+	time = curTime - m_PacketStartTime;
 	if(time < 0.0)
-		m_PacketStartTime = GetCurrentTime();
+		m_PacketStartTime = curTime;
 
 	return time;
 }
