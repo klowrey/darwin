@@ -159,19 +159,6 @@ int LinuxCM730::WritePort(unsigned char* packet, int numPacket)
 
 int LinuxCM730::ReadPort(unsigned char* packet, int numPacket)
 {
-	/*
-	int ret = read(m_Socket_fd, packet, numPacket);
-
-	printf("%d\n", ret);
-	if (ret < 0) {
-		int err = errno;
-		if (err == EAGAIN) {
-			printf(" NON BLOCKING SERIAL \n");
-		}
-	}
-
-	return ret;
-	*/
 	return read(m_Socket_fd, packet, numPacket);
 }
 

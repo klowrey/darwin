@@ -150,8 +150,9 @@ namespace Robot
 
 			enum
 			{
+				ID_TEST_SERVO = 25,
 				ID_CM			= 200,
-				ID_BROADCAST	= 254
+				ID_BROADCAST	= 254,
 			};
 
 		private:
@@ -162,6 +163,7 @@ namespace Robot
 			unsigned char m_BulkReadTxPacket[MAXNUM_TXPARAM + 10];
 
 			int TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int priority);
+			int OneTxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int priority);
 			unsigned char CalculateChecksum(unsigned char *packet);
 
 		public:

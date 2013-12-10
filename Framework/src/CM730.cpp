@@ -9,6 +9,9 @@
 #include "CM730.h"
 #include "MotionStatus.h"
 
+
+#include <time.h>
+
 using namespace Robot;
 
 
@@ -54,7 +57,6 @@ int BulkReadData::ReadWord(int address)
 	return 0;
 }
 
-
 CM730::CM730(PlatformCM730 *platform)
 {
 	m_Platform = platform;
@@ -66,6 +68,257 @@ CM730::CM730(PlatformCM730 *platform)
 CM730::~CM730()
 {
 	Disconnect();
+}
+
+static double ms_diff(timespec start, timespec end)
+{
+	timespec temp;
+	if ((end.tv_nsec-start.tv_nsec)<0) {
+		temp.tv_sec = end.tv_sec-start.tv_sec-1;
+		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+	} else {
+		temp.tv_sec = end.tv_sec-start.tv_sec;
+		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+	}
+	return (double)(temp.tv_sec*1000.0+temp.tv_nsec/1000000.0);
+}
+
+int CM730::OneTxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int priority)
+{
+	if(priority > 1)
+		m_Platform->LowPriorityWait();
+	if(priority > 0)
+		m_Platform->MidPriorityWait();
+	m_Platform->HighPriorityWait();
+
+	int res = TX_FAIL;
+	int length = txpacket[LENGTH] + 4;
+
+	txpacket[0] = 0xFF;
+	txpacket[1] = 0xFF;
+	txpacket[length - 1] = CalculateChecksum(txpacket);
+
+	static struct timespec start_time;
+	static struct timespec write_time;
+	static struct timespec read_time;
+	static struct timespec parse_time;
+
+	if(length < (MAXNUM_TXPARAM + 6))
+	{
+		m_Platform->ClearPort();
+		clock_gettime(CLOCK_MONOTONIC, &start_time);
+		if(m_Platform->WritePort(txpacket, length) == length)
+		{
+			clock_gettime(CLOCK_MONOTONIC, &write_time);
+			if (txpacket[ID] != ID_BROADCAST)
+			{
+				int to_length = 0;
+
+				if(txpacket[INSTRUCTION] == INST_READ)
+					to_length = txpacket[PARAMETER+1] + 6;
+				else
+					to_length = 6;
+
+				m_Platform->SetPacketTimeout(length);
+
+				int get_length = 0;
+
+				while(1)
+				{
+					length = m_Platform->ReadPort(&rxpacket[get_length], to_length - get_length);
+					get_length += length;
+
+					if(get_length == to_length)
+					{
+						// Find packet header
+						int i;
+						for(i = 0; i < (get_length - 1); i++)
+						{
+							if(rxpacket[i] == 0xFF && rxpacket[i+1] == 0xFF)
+								break;
+							else if(i == (get_length - 2) && rxpacket[get_length - 1] == 0xFF)
+								break;
+						}
+
+						if(i == 0)
+						{
+							// Check checksum
+							unsigned char checksum = CalculateChecksum(rxpacket);
+
+							if(rxpacket[get_length-1] == checksum)
+								res = SUCCESS;
+							else
+								res = RX_CORRUPT;
+
+							break;
+						}
+						else
+						{
+							for(int j = 0; j < (get_length - i); j++)
+								rxpacket[j] = rxpacket[j+i];
+							get_length -= i;
+						}						
+					}
+					else
+					{
+						if(m_Platform->IsPacketTimeout() == true)
+						{
+							if(get_length == 0)
+								res = RX_TIMEOUT;
+							else
+								res = RX_CORRUPT;
+
+							break;
+						}
+					}
+				}
+				clock_gettime(CLOCK_MONOTONIC, &read_time);
+				clock_gettime(CLOCK_MONOTONIC, &parse_time);
+
+				printf("Norm Write: %f\tRead: %f: Parse: %f\n",
+						ms_diff(start_time, write_time), 
+						ms_diff(write_time, read_time), 
+						ms_diff(read_time, parse_time));
+			}
+			else if(txpacket[INSTRUCTION] == INST_BULK_READ)
+			{
+				int to_length = 0;
+				int num = (txpacket[LENGTH]-3) / 3;
+
+				for(int x = 0; x < num; x++)
+				{
+					int _id = txpacket[PARAMETER+(3*x)+2];
+					int _len = txpacket[PARAMETER+(3*x)+1];
+					int _addr = txpacket[PARAMETER+(3*x)+3];
+
+					to_length += _len + 6;
+					m_BulkReadData[_id].length = _len;
+					m_BulkReadData[_id].start_address = _addr;
+				}
+
+				m_Platform->SetPacketTimeout(to_length*1.5);
+
+				int get_length = 0;
+
+				clock_gettime(CLOCK_MONOTONIC, &write_time);
+				while(1)
+				{
+					length = m_Platform->ReadPort(&rxpacket[get_length], to_length - get_length);
+					get_length += length;
+
+					if(get_length == to_length)
+					{
+						res = SUCCESS;
+						break;
+					}
+					else
+					{
+						if(m_Platform->IsPacketTimeout() == true)
+						{
+							if(get_length == 0)
+								res = RX_TIMEOUT;
+							else
+								res = RX_CORRUPT;
+
+							break;
+						}
+					}
+				}
+				clock_gettime(CLOCK_MONOTONIC, &read_time);
+
+				for(int x = 0; x < num; x++)
+				{
+					int _id = txpacket[PARAMETER+(3*x)+2];
+					m_BulkReadData[_id].error = -1;
+				}
+
+				while(1)
+				{
+					int i;
+					for(i = 0; i < get_length - 1; i++)
+					{
+						if(rxpacket[i] == 0xFF && rxpacket[i+1] == 0xFF)
+							break;
+						else if(i == (get_length - 2) && rxpacket[get_length - 1] == 0xFF)
+							break;
+					}
+
+					if(i == 0)
+					{
+						// Check checksum
+						unsigned char checksum = CalculateChecksum(rxpacket);
+
+						if(rxpacket[LENGTH+rxpacket[LENGTH]] == checksum)
+						{
+							for(int j = 0; j < (rxpacket[LENGTH]-2); j++)
+								m_BulkReadData[rxpacket[ID]].table[m_BulkReadData[rxpacket[ID]].start_address + j] = rxpacket[PARAMETER + j];
+
+							m_BulkReadData[rxpacket[ID]].error = (int)rxpacket[ERRBIT];
+
+							int cur_packet_length = LENGTH + 1 + rxpacket[LENGTH];
+							to_length = get_length - cur_packet_length;
+							for(int j = 0; j <= to_length; j++)
+								rxpacket[j] = rxpacket[j+cur_packet_length];
+
+							get_length = to_length;
+							num--;
+						}
+						else
+						{
+							res = RX_CORRUPT;
+
+							for(int j = 0; j <= get_length - 2; j++)
+								rxpacket[j] = rxpacket[j+2];
+
+							to_length = get_length -= 2;
+						}
+
+						if(num == 0)
+							break;
+						else if(get_length <= 6)
+						{
+							if(num != 0) res = RX_CORRUPT;
+							break;
+						}
+
+					}
+					else
+					{
+						for(int j = 0; j < (get_length - i); j++)
+							rxpacket[j] = rxpacket[j+i];
+						get_length -= i;
+					}
+				}
+
+				clock_gettime(CLOCK_MONOTONIC, &parse_time);
+
+				printf("Bulk Write: %f\tRead: %f: Parse: %f\n",
+						ms_diff(start_time, write_time), 
+						ms_diff(write_time, read_time), 
+						ms_diff(read_time, parse_time));
+			}
+			else
+			{
+				res = SUCCESS;			
+			}
+		}
+		else
+		{
+			res = TX_FAIL;		
+		}
+	}
+	else
+	{
+		res = TX_CORRUPT;
+	}
+
+	m_Platform->HighPriorityRelease();
+	if(priority > 0)
+		m_Platform->MidPriorityRelease();
+	if(priority > 1)
+		m_Platform->LowPriorityRelease();
+
+	return res;
 }
 
 int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int priority)
@@ -82,6 +335,11 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 	txpacket[0] = 0xFF;
 	txpacket[1] = 0xFF;
 	txpacket[length - 1] = CalculateChecksum(txpacket);
+
+	static struct timespec start_time;
+	static struct timespec write_time;
+	static struct timespec read_time;
+	static struct timespec parse_time;
 
 	if(DEBUG_PRINT == true)
 	{
@@ -133,8 +391,10 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 	if(length < (MAXNUM_TXPARAM + 6))
 	{
 		m_Platform->ClearPort();
+		clock_gettime(CLOCK_MONOTONIC, &start_time);
 		if(m_Platform->WritePort(txpacket, length) == length)
 		{
+			clock_gettime(CLOCK_MONOTONIC, &write_time);
 			if (txpacket[ID] != ID_BROADCAST)
 			{
 				int to_length = 0;
@@ -204,11 +464,15 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 
 							break;
 						}
-						/*
-								res = RX_CORRUPT;
-						*/
 					}
 				}
+				clock_gettime(CLOCK_MONOTONIC, &read_time);
+				clock_gettime(CLOCK_MONOTONIC, &parse_time);
+
+				printf("Norm Write: %f\tRead: %f: Parse: %f\n",
+						ms_diff(start_time, write_time), 
+						ms_diff(write_time, read_time), 
+						ms_diff(read_time, parse_time));
 			}
 			else if(txpacket[INSTRUCTION] == INST_BULK_READ)
 			{
@@ -232,6 +496,7 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 				if(DEBUG_PRINT == true)
 					fprintf(stderr, "RX: ");
 
+				clock_gettime(CLOCK_MONOTONIC, &write_time);
 				while(1)
 				{
 					length = m_Platform->ReadPort(&rxpacket[get_length], to_length - get_length);
@@ -258,11 +523,9 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 
 							break;
 						}
-						/*
-								res = RX_CORRUPT;
-						*/
 					}
 				}
+				clock_gettime(CLOCK_MONOTONIC, &read_time);
 
 				for(int x = 0; x < num; x++)
 				{
@@ -329,14 +592,26 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 						get_length -= i;
 					}
 				}
+
+				clock_gettime(CLOCK_MONOTONIC, &parse_time);
+
+				printf("Bulk Write: %f\tRead: %f: Parse: %f\n",
+						ms_diff(start_time, write_time), 
+						ms_diff(write_time, read_time), 
+						ms_diff(read_time, parse_time));
 			}
 			else
+			{
 				res = SUCCESS;			
+			}
 		}
 		else
+		{
 			res = TX_FAIL;		
+		}
 	}
-	else {
+	else
+	{
 		res = TX_CORRUPT;
 	}
 
@@ -381,6 +656,8 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 		m_Platform->MidPriorityRelease();
 	if(priority > 1)
 		m_Platform->LowPriorityRelease();
+
+
 
 	return res;
 }
@@ -746,9 +1023,11 @@ void CM730::MakeBulkReadPacketMPC()
 
 	if(Ping(CM730::ID_CM, 0) == SUCCESS)
 	{
-		m_BulkReadTxPacket[PARAMETER+3*number+1] = 30;
+		//m_BulkReadTxPacket[PARAMETER+3*number+1] = 30;
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 12;
 		m_BulkReadTxPacket[PARAMETER+3*number+2] = CM730::ID_CM;
-		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER;
+		//m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER;
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_GYRO_Z_L;
 		number++;
 	}
 
@@ -803,6 +1082,7 @@ void CM730::MakeBulkReadPacketServo25()
 		m_BulkReadTxPacket[PARAMETER+3*number+1] = 30;
 		m_BulkReadTxPacket[PARAMETER+3*number+2] = CM730::ID_CM;
 		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER;
+		//m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_GYRO_Z_L;
 		number++;
 	}
 
@@ -810,10 +1090,10 @@ void CM730::MakeBulkReadPacketServo25()
 	const int MPC_READ_LENGTH = 10;
 	//const int MPC_READ_LENGTH = 2;
 
-	if(MotionStatus::m_CurrentJoints.GetEnable(25))
+	if(MotionStatus::m_CurrentJoints.GetEnable(CM730::ID_TEST_SERVO))
 	{
 		m_BulkReadTxPacket[PARAMETER+3*number+1] = MPC_READ_LENGTH;
-		m_BulkReadTxPacket[PARAMETER+3*number+2] = 25;	// id
+		m_BulkReadTxPacket[PARAMETER+3*number+2] = CM730::ID_TEST_SERVO;	// id
 		m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_TORQUE_LIMIT_L; // start address
 		//m_BulkReadTxPacket[PARAMETER+3*number+3] = MX28::P_PRESENT_POSITION_L; // start address
 		number++;
