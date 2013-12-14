@@ -10,6 +10,7 @@
 TARGET = read_write
 TARGET2 = test_read_write
 TARGET_LOG = sys_id_log 
+TARGET_COMPLIANCE = compliance
 
 CXX = g++
 INCLUDE_DIRS = -I../../../include -I../../../../Framework/include
@@ -19,10 +20,10 @@ LIBS += -lpthread -lrt
 OBJS =	main.o
 
 
-all: darwin.a $(TARGET) $(TARGET2) $(TARGET_LOG)
+all: darwin.a $(TARGET) $(TARGET2) $(TARGET_LOG) $(TARGET_COMPLIANCE)
 
 clean:
-	rm -f *.a *.o $(TARGET) $(TARGET2) $(TARGET_LOG) core *~ *.so *.lo
+	rm -f *.a *.o $(TARGET) $(TARGET2) $(TARGET_LOG) $(TARGET_COMPLIANCE) core *~ *.so *.lo
 
 libclean:
 	make -C ../../../build clean
@@ -43,6 +44,10 @@ $(TARGET2): ll_main.o ../../../lib/darwin.a
 $(TARGET_LOG): log_main.o ../../../lib/darwin.a
 	$(CXX) -o $(TARGET_LOG) ll_main.o ../../../lib/darwin.a $(LIBS)
 	chmod 755 $(TARGET_LOG)
+
+$(TARGET_COMPLIANCE): compliance.o ../../../lib/darwin.a
+	$(CXX) -o $(TARGET_COMPLIANCE) compliance.o ../../../lib/darwin.a $(LIBS)
+	chmod 755 $(TARGET_COMPLIANCE)
 
 # useful to make a backup "make tgz"
 tgz: clean

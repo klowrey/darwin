@@ -65,7 +65,8 @@ int main(int argc, char* argv[])
 
 	int value;
 	int count = 0;
-	int runs = 0;
+	int runs = -1;
+	int alternate = 1;
 	static struct timespec start_time;
 	static struct timespec begin_time;
 	static struct timespec end_time;
@@ -96,18 +97,35 @@ int main(int argc, char* argv[])
 			int id;
 
 			for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<=JointData::ID_L_ANKLE_ROLL; joint+=2) {
-				value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
-				id = joint+1;
-				value = MX28::GetMirrorValue(value);
-				param[n++] = id;
-				param[n++] = CM730::GetLowByte(value);
-				param[n++] = CM730::GetHighByte(value);
-				joint_num++;
+				if (alternate == 0) {
+					value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+					id = joint+1;
+					value = MX28::GetMirrorValue(value);
+					param[n++] = id;
+					param[n++] = 0;
+					joint_num++;
+				}
+				else {
+					value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+					id = joint+1;
+					value = MX28::GetMirrorValue(value);
+					param[n++] = id;
+					param[n++] = CM730::GetLowByte(value);
+					param[n++] = CM730::GetHighByte(value);
+					joint_num++;
+				}
 			}
 
 			if(joint_num > 0) {
 				//cm730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
-				cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
+				if (alternate == 0) {
+					cm730.SyncWrite(MX28::P_TORQUE_ENABLE, 2, joint_num, param);
+					alternate = 1;
+				}
+				else {
+					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
+					alternate = 0;
+				}
 			}
 		}
 		else {
@@ -162,8 +180,8 @@ int main(int argc, char* argv[])
 			r_time.clear();
 			w_time.clear();
 
-			runs++;
-			if (runs >= 10) {
+			runs--;
+			if (runs == 0) {
 				break;
 			}
 			count = 0;
@@ -172,8 +190,8 @@ int main(int argc, char* argv[])
 		// Summary
 		clock_gettime(TEST_CLOCK, &end_time);
 		if (count == 100) {
-			runs++;
-			if (runs >= 20) {
+			runs--;
+			if (runs == 0) {
 				printf("Total RW: %d, Time: %fms, %fmsprw\n",
 						runs*100, ms_diff(begin_time, end_time),
 						ms_diff(begin_time, end_time) / (runs*100));
@@ -184,7 +202,7 @@ int main(int argc, char* argv[])
 #endif
 		//usleep(500);
 	}
-		clock_gettime(TEST_CLOCK, &end_time);
+	clock_gettime(TEST_CLOCK, &end_time);
 	printf("Total time: %fms\n", ms_diff(start_time, end_time));
 
 	return 0;

@@ -466,13 +466,6 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 						}
 					}
 				}
-				clock_gettime(CLOCK_MONOTONIC, &read_time);
-				clock_gettime(CLOCK_MONOTONIC, &parse_time);
-
-				printf("Norm Write: %f\tRead: %f: Parse: %f\n",
-						ms_diff(start_time, write_time), 
-						ms_diff(write_time, read_time), 
-						ms_diff(read_time, parse_time));
 			}
 			else if(txpacket[INSTRUCTION] == INST_BULK_READ)
 			{
@@ -592,13 +585,6 @@ int CM730::TxRxPacket(unsigned char *txpacket, unsigned char *rxpacket, int prio
 						get_length -= i;
 					}
 				}
-
-				clock_gettime(CLOCK_MONOTONIC, &parse_time);
-
-				printf("Bulk Write: %f\tRead: %f: Parse: %f\n",
-						ms_diff(start_time, write_time), 
-						ms_diff(write_time, read_time), 
-						ms_diff(read_time, parse_time));
 			}
 			else
 			{
@@ -1032,8 +1018,8 @@ void CM730::MakeBulkReadPacketMPC()
 	}
 
 	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
-	//const int MPC_READ_LENGTH = 10;
-	const int MPC_READ_LENGTH = 2;
+	const int MPC_READ_LENGTH = 8;
+	//const int MPC_READ_LENGTH = 2;
 
 	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
 	{
