@@ -1,13 +1,13 @@
 ###############################################################
 #
-# Purpose: Makefile for "read_write"
-# Author.: robotis
+# Purpose: Makefile for "mpc_ctrl"
+# Author.: robotis & uw
 # Version: 0.1
 # License: GPL
 #
 ###############################################################
 
-TARGET = read_write
+TARGET = streamer
 TARGET2 = test_read_write
 TARGET_LOG = sys_id_log 
 TARGET_COMPLIANCE = compliance
@@ -16,8 +16,6 @@ CXX = g++
 INCLUDE_DIRS = -I../../../include -I../../../../Framework/include
 CXXFLAGS +=	-O3 -DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
 LIBS += -lpthread -lrt
-
-OBJS =	main.o
 
 all: darwin.a $(TARGET) $(TARGET2) $(TARGET_LOG) $(TARGET_COMPLIANCE)
 
@@ -32,7 +30,7 @@ distclean: clean libclean
 darwin.a:
 	make -C ../../../build
 
-$(TARGET): $(OBJS) ../../../lib/darwin.a
+$(TARGET): stream_main.o ../../../lib/darwin.a
 	$(CXX) -o $(TARGET) $(OBJS) ../../../lib/darwin.a $(LIBS)
 	chmod 755 $(TARGET)
 
