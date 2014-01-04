@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <linux/videodev2.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #include "Image.h"
 #include "minIni.h"

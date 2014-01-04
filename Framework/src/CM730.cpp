@@ -1018,8 +1018,9 @@ void CM730::MakeBulkReadPacketMPC()
 	}
 
 	// length (limits + goal + speed + torque)x2 + (voltage + temp)x1
-	const int MPC_READ_LENGTH = 8;
-	//const int MPC_READ_LENGTH = 2;
+	//const int MPC_READ_LENGTH = 8;
+	// length (goal + speed)x2
+	const int MPC_READ_LENGTH = 4;
 
 	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
 	{

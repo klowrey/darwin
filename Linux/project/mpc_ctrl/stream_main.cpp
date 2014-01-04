@@ -15,6 +15,34 @@
 
 using namespace Robot;
 
+/*
+   enum
+   {
+   ID_R_SHOULDER_PITCH     = 1,
+   ID_R_SHOULDER_ROLL      = 3,
+   ID_R_ELBOW              = 5,
+   ID_R_HIP_YAW            = 7,
+   ID_R_HIP_ROLL           = 9,
+   ID_R_HIP_PITCH          = 11,
+   ID_R_KNEE               = 13,
+   ID_R_ANKLE_PITCH        = 15,
+   ID_R_ANKLE_ROLL         = 17,
+
+   ID_L_SHOULDER_PITCH     = 2,
+   ID_L_SHOULDER_ROLL      = 4,
+   ID_L_ELBOW              = 6,
+   ID_L_HIP_YAW            = 8,
+   ID_L_HIP_ROLL           = 10,
+   ID_L_HIP_PITCH          = 12,
+   ID_L_KNEE               = 14,
+   ID_L_ANKLE_PITCH        = 16,
+   ID_L_ANKLE_ROLL         = 18,
+
+   ID_HEAD_PAN             = 19,
+   ID_HEAD_TILT            = 20,
+   };
+   */
+
 double ms_diff(timespec start, timespec end)
 {
 	timespec temp;
@@ -28,8 +56,9 @@ double ms_diff(timespec start, timespec end)
 	return (double)(temp.tv_sec*1000.0+temp.tv_nsec/1000000.0);
 }
 
-#define SYNCED
-#define PRINTING
+double joint2radian(int joint_value) {
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -57,7 +86,7 @@ int main(int argc, char* argv[])
 
 	printf("P: %d, D: %d\n", p_gain, d_gain);
 
-	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<=JointData::ID_L_ANKLE_ROLL; joint++) {
+	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 0, 0);
 		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
 		cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
@@ -76,44 +105,50 @@ int main(int argc, char* argv[])
 	std::vector<double> w_time;
 	clockid_t TEST_CLOCK = CLOCK_MONOTONIC;
 
+	LinuxServer new_sock;
+	LinuxServer server ( TCPIP_PORT );
 
 	while(1)
 	{
-#ifdef PRINTING
 		clock_gettime(TEST_CLOCK, &start_time);
-#endif
 
-#ifdef SYNCED
 		if (cm730.BulkRead() == CM730::SUCCESS) {
 
 			//int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
 			//int param[(JointData::NUMBER_OF_JOINTS-2) * MX28::PARAM_BYTES];
 
 			clock_gettime(TEST_CLOCK, &read_time);
-			int ctrl_joints = 9;
-			int param[ctrl_joints * MX28::PARAM_BYTES];
+
+			int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
 			int n = 0;
 			int joint_num = 0;
 			int id;
+			double qpos;
+			double qvel;
 
-			for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<=JointData::ID_L_ANKLE_ROLL; joint+=2) {
-				if (alternate == 0) {
-					value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
-					id = joint+1;
-					value = MX28::GetMirrorValue(value);
-					param[n++] = id;
-					param[n++] = 0;
-					joint_num++;
-				}
-				else {
-					value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
-					id = joint+1;
-					value = MX28::GetMirrorValue(value);
-					param[n++] = id;
-					param[n++] = CM730::GetLowByte(value);
-					param[n++] = CM730::GetHighByte(value);
-					joint_num++;
-				}
+			// prepare data for sending to mpc
+			for (int joint=1; joint<JointData::NUMBER_OF_JOINTS; joint++) {
+				value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+				qpos = joint2radian(value);
+
+				value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
+				// TODO convert this value to radians / second
+				// value = 0.11 rpm with weird sign flip
+				qvel = (double) vel;
+
+				param[n++] = id;
+				param[n++] = 0;
+			}
+
+			// prepare commands to joints
+			for (int joint=1; joint<JointData::NUMBER_OF_JOINTS; joint++) {
+				value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+				id = joint+1;
+				value = MX28::GetMirrorValue(value);
+				param[n++] = id;
+				param[n++] = CM730::GetLowByte(value);
+				param[n++] = CM730::GetHighByte(value);
+				joint_num++;
 			}
 
 			if(joint_num > 0) {
@@ -131,25 +166,14 @@ int main(int argc, char* argv[])
 		else {
 			printf("Couldn't read data!\n");
 		}
-#else
-		if(cm730.ReadWord(JointData::ID_R_SHOULDER_PITCH, MX28::P_PRESENT_POSITION_L, &value, 0) == CM730::SUCCESS)
-		{
-			cm730.WriteWord(JointData::ID_L_SHOULDER_PITCH, MX28::P_GOAL_POSITION_L, MX28::GetMirrorValue(value), 0);
-		}
-
-		if(cm730.ReadWord(JointData::ID_R_SHOULDER_ROLL, MX28::P_PRESENT_POSITION_L, &value, 0) == CM730::SUCCESS)
-		{
-			cm730.WriteWord(JointData::ID_L_SHOULDER_ROLL, MX28::P_GOAL_POSITION_L, MX28::GetMirrorValue(value), 0);
-		}
-
-		if(cm730.ReadWord(JointData::ID_R_ELBOW, MX28::P_PRESENT_POSITION_L, &value, 0) == CM730::SUCCESS)
-		{
-			cm730.WriteWord(JointData::ID_L_ELBOW, MX28::P_GOAL_POSITION_L, MX28::GetMirrorValue(value), 0);
-		}
-#endif
-
 		count++;
-#ifdef PRINTING
+
+
+
+
+
+
+
 		clock_gettime(TEST_CLOCK, &write_time);
 
 		r_time.push_back(ms_diff(start_time, read_time));
@@ -186,21 +210,6 @@ int main(int argc, char* argv[])
 			}
 			count = 0;
 		}
-#else
-		// Summary
-		clock_gettime(TEST_CLOCK, &end_time);
-		if (count == 100) {
-			runs--;
-			if (runs == 0) {
-				printf("Total RW: %d, Time: %fms, %fmsprw\n",
-						runs*100, ms_diff(begin_time, end_time),
-						ms_diff(begin_time, end_time) / (runs*100));
-				break;
-			}
-			count = 0;
-		}
-#endif
-		//usleep(500);
 	}
 	clock_gettime(TEST_CLOCK, &end_time);
 	printf("Total time: %fms\n", ms_diff(start_time, end_time));
