@@ -43,7 +43,8 @@ bool LinuxSocket::create()
 	return true;
 }
 
-bool LinuxSocket::bind ( const int port )  {
+bool LinuxSocket::bind ( const int port ) 
+{
 	if ( ! is_valid() )
 	{
 		return false;
@@ -63,6 +64,7 @@ bool LinuxSocket::bind ( const int port )  {
 
 	return true;
 }
+
 bool LinuxSocket::listen() const
 {
 	if ( ! is_valid() )
@@ -87,7 +89,14 @@ bool LinuxSocket::accept ( LinuxSocket& new_socket ) const
 	if ( new_socket.m_sock <= 0 )
 		return false;
 	else
+	{
+		int on = 1;
+		//if (setsockopt(new_socket.m_sock, SOL_SOCKET, SO_KEEPALIVE, (const char*) &on, sizeof(on)) == -1)
+		//	return false;
+		if (setsockopt(new_socket.m_sock, IPPROTO_TCP, TCP_NODELAY, (const char*) &on, sizeof(on)) == -1)
+			return false;
 		return true;
+	}
 }
 
 bool LinuxSocket::send ( const std::string s ) const
