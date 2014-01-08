@@ -13,7 +13,7 @@
 #include <fstream>
 #include <iostream>
 
-#define MPC_PORT 13105
+#define MPC_PORT 13131
 
 using namespace Robot;
 using namespace std;
@@ -49,6 +49,7 @@ const int RECV_BUF_SIZE = 60; // pos, p gain, d gain
    };
    */
 
+/*
 void StartLogging(int p, int d)
 {
 	char szFile[32] = {0,};
@@ -83,6 +84,7 @@ void StopLogging()
 {
 	m_LogFileStream.close();
 }
+*/
 
 double ms_diff(timespec start, timespec end)
 {
@@ -99,7 +101,7 @@ double ms_diff(timespec start, timespec end)
 
 double joint2radian(int joint_value) {
 	//return (joint_value * 0.088) * 3.14159265 / 180.0;
-	return joint_value * 0.00153398078;
+	return (joint_value-2048.0) * 0.00153398078;
 }
 
 double rpm2radianspersecond(int rpm) {
@@ -171,170 +173,187 @@ int main(int argc, char* argv[])
 		{
 			cout << "[Waiting..]" << endl;            
 			server.accept(data_sock); // tcp_nodelay, but a blocking port
-			//data_sock.m_socket.set_non_blocking(true);
+			//data_sock.m_socket.set_non_blocking(false);
 			cout << "[Accepted..]" << endl;
 
 			try
 			{
-				if (cm730.BulkRead() == CM730::SUCCESS) {
+				while (true) {
+					if (cm730.BulkRead() == CM730::SUCCESS) {
 
-					//int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
-					//int param[(JointData::NUMBER_OF_JOINTS-2) * MX28::PARAM_BYTES];
+						//int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
+						//int param[(JointData::NUMBER_OF_JOINTS-2) * MX28::PARAM_BYTES];
 
-					clock_gettime(TEST_CLOCK, &read_time);
-					buf[0] = ms_diff(start_time, read_time);
-					p_buf = buf+1;
-					int index = 1;
+						clock_gettime(TEST_CLOCK, &read_time);
+						buf[0] = ms_diff(start_time, read_time);
+						p_buf = buf+1;
+						int index = 1;
 
-					int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
-					int n = 0;
-					int joint_num = 0;
-					int id;
-					double qpos;
-					double qvel;
+						int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
+						int n = 0;
+						int joint_num = 0;
+						int id;
+						double qpos;
+						double qvel;
 
-					// prepare data for sending to mpc
-					for (int joint=1; joint<=JointData::ID_R_ANKLE_ROLL; joint++) {
-						// right joints
-						value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
-						qpos = joint2radian(value);
-						*p_buf = qpos;
-						index++;
+						// prepare data for sending to mpc
+						for (int joint=1; joint<=JointData::ID_R_ANKLE_ROLL; joint++) {
+							// right joints
+							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+							qpos = joint2radian(value);
+							*p_buf = qpos;
+							index++;
 
-						value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
-						if (value > 1023) {
-							value = 1024 - value;
+							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
+							if (value > 1023) {
+								value = 1024 - value;
+							}
+							qvel = rpm2radianspersecond(value);
+							*(p_buf+20) = qvel;
+							index++;
+
+							//p_buf++;
+
+							// left joints
+							joint++;
+							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+							qpos = joint2radian(value);
+							*(p_buf+9) = qpos;
+							index++;
+
+							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
+							if (value > 1023) {
+								value = 1024 - value;
+							}
+							qvel = rpm2radianspersecond(value);
+							*(p_buf+29) = qvel;
+							index++;
+
+							p_buf++;
 						}
-						qvel = rpm2radianspersecond(value);
-						*(p_buf+20) = qvel;
-						index++;
 
-						//p_buf++;
+						p_buf += 9;
 
-						// left joints
-						joint++;
-						value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
-						qpos = joint2radian(value);
-						*(p_buf+9) = qpos;
-						index++;
+						for (int joint=JointData::ID_HEAD_PAN; joint<=JointData::ID_HEAD_TILT; joint++) {
+							// head joints
+							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
+							qpos = joint2radian(value);
+							*p_buf = qpos;
+							index++;
 
-						value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
-						if (value > 1023) {
-							value = 1024 - value;
+							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
+							if (value > 1023) {
+								value = 1024 - value;
+							}
+							qvel = rpm2radianspersecond(value);
+							*(p_buf+20) = qvel;
+							index++;
+
+							p_buf++;
 						}
-						qvel = rpm2radianspersecond(value);
-						*(p_buf+29) = qvel;
-						index++;
 
+						p_buf += 20;
+
+						// gyroscope dps to rps
+						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)-512)*0.017453229251;
 						p_buf++;
-					}
-
-					p_buf += 9;
-
-					for (int joint=JointData::ID_HEAD_PAN; joint<=JointData::ID_HEAD_TILT; joint++) {
-						// head joints
-						value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
-						qpos = joint2radian(value);
-						*p_buf = qpos;
-						index++;
-
-						value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_SPEED_L);
-						if (value > 1023) {
-							value = 1024 - value;
-						}
-						qvel = rpm2radianspersecond(value);
-						*(p_buf+20) = qvel;
-						index++;
-
+						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)-512)*0.017453229251;
 						p_buf++;
-					}
+						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L)-512)*0.017453229251;
+						p_buf++;
+						index+=3;
 
-					p_buf += 20;
+						// accelerometer +- 4g's
+						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)-512) / 128.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)-512) / 128.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)-512) / 128.0;
+						p_buf++;
+						index+=3;
 
-					// gyroscope dps to rps
-					*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)-512)*0.017453229251;
-					p_buf++;
-					*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)-512)*0.017453229251;
-					p_buf++;
-					*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L)-512)*0.017453229251;
-					p_buf++;
-					index+=3;
 
-					// accelerometer +- 4g's
-					*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)-512) / 128.0;
-					p_buf++;
-					*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)-512) / 128.0;
-					p_buf++;
-					*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)-512) / 128.0;
-					p_buf++;
-					index+=3;
-
-					///////// Verify Output
+						///////// Verify Output
 #ifdef VERBOSE
-					printf("Added %d things to buffer.\n", index);
-					printf("time: ");
-					printf("%f ", buf[0]);
+						printf("Added %d things to buffer.\n", index);
+						printf("time: ");
+						printf("%f ", buf[0]);
 
-					printf("\nqpos R: ");
-					for (int i=1; i<10; i++) {
-						printf("%1.2f ", buf[i]);
-					}
-					printf("L: ");
-					for (int i=10; i<19; i++) {
-						printf("%1.2f ", buf[i]);
-					}
-					printf("H: ");
-					for (int i=19; i<21; i++) {
-						printf("%1.2f ", buf[i]);
-					}
+						printf("\nqpos R: ");
+						for (int i=1; i<10; i++) {
+							printf("%1.2f ", buf[i]);
+						}
+						printf("L: ");
+						for (int i=10; i<19; i++) {
+							printf("%1.2f ", buf[i]);
+						}
+						printf("H: ");
+						for (int i=19; i<21; i++) {
+							printf("%1.2f ", buf[i]);
+						}
 
-					printf("\nqvel R: ");
-					for (int i=21; i<30; i++) {
-						printf("%1.2f ", buf[i]);
-					}
-					printf("L: ");
-					for (int i=30; i<39; i++) {
-						printf("%1.2f ", buf[i]);
-					}
-					printf("H: ");
-					for (int i=39; i<41; i++) {
-						printf("%1.2f ", buf[i]);
-					}
-					printf("\nsnsrs : ");
-					for (int i=41; i<47; i++) {
-						printf("%1.2f ", buf[i]);
-					}
-					printf("\n");
+						printf("\nqvel R: ");
+						for (int i=21; i<30; i++) {
+							printf("%1.2f ", buf[i]);
+						}
+						printf("L: ");
+						for (int i=30; i<39; i++) {
+							printf("%1.2f ", buf[i]);
+						}
+						printf("H: ");
+						for (int i=39; i<41; i++) {
+							printf("%1.2f ", buf[i]);
+						}
+						printf("\nsnsrs : ");
+						for (int i=41; i<47; i++) {
+							printf("%1.2f ", buf[i]);
+						}
+						printf("\n");
 #endif
 
-					data_sock.send((unsigned char*)buf, SEND_BUF_SIZE*sizeof(double));
-					data_sock.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double));
+						printf("S: %1.2f P: %1.2f %1.2f %1.2f %1.2f\n",
+								buf[0], buf[1], buf[2], buf[3], buf[4]);
 
-					// prepare commands to joints
-					for (int joint=0; joint<20; joint++) {
-						int id = joint+1;
+						if ( !data_sock.send((unsigned char*)buf, SEND_BUF_SIZE*sizeof(double)))
+						{
+							throw LinuxSocketException ( "Could not write to socket." );
+						}
 
-						param[n++] = id;
-						//param[n++] = ctrl[joint]; // d_gain
-						//param[n++] = ctrl[joint+1];// i_gain
-						//param[n++] = ctrl[joint+2];// p_gain
-						//param[n++] = 0;
-						//value = ctrl[joint+4];
-						value = ctrl[joint]; // in joint space?
-						param[n++] = CM730::GetLowByte(value);
-						param[n++] = CM730::GetHighByte(value);
-						joint_num++;
+						memset((void*) ctrl, 0, 5*sizeof(double));
+
+						if ( !data_sock.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double))) {
+							throw LinuxSocketException ( "Could not write to socket." );
+						}
+
+						printf("R: %1.2f P: %1.2f %1.2f %1.2f %1.2f\n",
+								ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4]);
+
+						// prepare commands to joints
+						for (int joint=0; joint<20; joint++) {
+							int id = joint+1;
+
+							param[n++] = id;
+							//param[n++] = ctrl[joint]; // d_gain
+							//param[n++] = ctrl[joint+1];// i_gain
+							//param[n++] = ctrl[joint+2];// p_gain
+							//param[n++] = 0;
+							//value = ctrl[joint+4];
+							value = ctrl[joint]; // in joint space?
+							param[n++] = CM730::GetLowByte(value);
+							param[n++] = CM730::GetHighByte(value);
+							joint_num++;
+						}
+
+						if(joint_num > 0) {
+							//cm730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
+						}
 					}
-
-					if(joint_num > 0) {
-						//cm730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
+					else {
+						printf("Couldn't read data!\n");
+						usleep(1000);
 					}
+					count++;
 				}
-				else {
-					printf("Couldn't read data!\n");
-					usleep(1000);
-				}
-				count++;
 			}
 			catch ( LinuxSocketException& )
 			{
@@ -347,7 +366,7 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-	catch ( LinuxSocketException& )
+	catch ( LinuxSocketException& e)
 	{
 		cout << "Exception was caught:" << e.description() << "\nExiting.\n";
 	}

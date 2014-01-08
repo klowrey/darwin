@@ -8,7 +8,7 @@
 ###############################################################
 
 TARGET = streamer
-TARGET2 = test_read_write
+TARGET2 = joints
 TARGET_LOG = sys_id_log 
 
 CXX = g++
@@ -17,7 +17,7 @@ CXXFLAGS +=	-O3 -DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
 LIBS += -lpthread -lrt
 
 #all: darwin.a $(TARGET) $(TARGET2) $(TARGET_LOG)
-all: darwin.a $(TARGET)
+all: darwin.a $(TARGET) $(TARGET2)
 
 #clean:
 #	rm -f *.a *.o $(TARGET) $(TARGET2) $(TARGET_LOG) core *~ *.so *.lo
@@ -37,9 +37,9 @@ $(TARGET): stream_main.o ../../lib/darwin.a
 	$(CXX) -o $(TARGET) stream_main.o ../../lib/darwin.a $(LIBS)
 	chmod 755 $(TARGET)
 
-#$(TARGET2): ll_main.o ../../lib/darwin.a
-#	$(CXX) -o $(TARGET2) ll_main.o ../../lib/darwin.a $(LIBS)
-#	chmod 755 $(TARGET2)
+$(TARGET2): joints_main.o ../../lib/darwin.a
+	$(CXX) -o $(TARGET2) joints_main.o ../../lib/darwin.a $(LIBS)
+	chmod 755 $(TARGET2)
 
 #$(TARGET_LOG): log_main.o ../../lib/darwin.a
 #	$(CXX) -o $(TARGET_LOG) ll_main.o ../../lib/darwin.a $(LIBS)
