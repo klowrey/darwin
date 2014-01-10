@@ -19,7 +19,7 @@ using namespace Robot;
 using namespace std;
 
 const int SEND_BUF_SIZE = 47;
-const int RECV_BUF_SIZE = 60; // pos, p gain, d gain
+const int RECV_BUF_SIZE = 21; // time + position
 
 /*
    enum
@@ -46,45 +46,32 @@ const int RECV_BUF_SIZE = 60; // pos, p gain, d gain
 
    19 ID_HEAD_PAN             = 19,
    20 ID_HEAD_TILT            = 20,
+
+   ID_R_SHOULDER_PITCH     = 1,
+   ID_L_SHOULDER_PITCH     = 2,
+   ID_R_SHOULDER_ROLL      = 3,
+   ID_L_SHOULDER_ROLL      = 4,
+   ID_R_ELBOW              = 5,
+   ID_L_ELBOW              = 6,
+   ID_R_HIP_YAW            = 7,
+   ID_L_HIP_YAW            = 8,
+   ID_R_HIP_ROLL           = 9,
+
+   ID_L_HIP_ROLL           = 10,
+   ID_R_HIP_PITCH          = 11,
+   ID_L_HIP_PITCH          = 12,
+   ID_R_KNEE               = 13,
+   ID_L_KNEE               = 14,
+   ID_R_ANKLE_PITCH        = 15,
+   ID_L_ANKLE_PITCH        = 16,
+   ID_R_ANKLE_ROLL         = 17,
+   ID_L_ANKLE_ROLL         = 18,
+
+   ID_HEAD_PAN             = 19,
+   ID_HEAD_TILT            = 20,
+ 
    };
    */
-
-/*
-void StartLogging(int p, int d)
-{
-	char szFile[32] = {0,};
-
-	int count = 0;
-	while(1)
-	{
-		//sprintf(szFile, "log%d.csv", count);
-		sprintf(szFile, "pid_%d_0_%d.csv", p, d);
-		if(0 != access(szFile, F_OK))
-			break;
-		count++;
-		if(count > 256) return;
-	}
-
-	m_LogFileStream.open(szFile, std::ios::out);
-
-#ifdef SINGLE_MX28	
-	m_LogFileStream << "TIME_MS,GOAL,POS,VEL,LOAD,VOLT,TEMP"<< std::endl;
-#else
-	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
-	{
-		m_LogFileStream << "ID_" << id << "_GP,ID_" << id << "_PP,";
-	}
-	m_LogFileStream << "GyroFB,GyroRL,AccelFB,AccelRL";
-	//m_LogFileStream << "L_FSR_X,L_FSR_Y,R_FSR_X,R_FSR_Y";
-	m_LogFileStream << << std::endl;
-#endif
-}
-
-void StopLogging()
-{
-	m_LogFileStream.close();
-}
-*/
 
 double ms_diff(timespec start, timespec end)
 {
@@ -104,9 +91,18 @@ double joint2radian(int joint_value) {
 	return (joint_value-2048.0) * 0.00153398078;
 }
 
-double rpm2radianspersecond(int rpm) {
+int radian2joint(double radian) {
+	return (int)(radian * 651.898650256) + 2048;;
+}
+
+double rpm2rads_ps(int rpm) {
 	//return rpm * 0.11 * 2 * 3.14159265 / 60;
 	return rpm * 0.01151917306;
+}
+
+int rad_ps2rpm(double rad_ps) {
+	//return rpm * 0.11 * 2 * 3.14159265 / 60;
+	return (int)(rad_ps * 86.8117871649);
 }
 
 int main(int argc, char* argv[])
@@ -127,8 +123,8 @@ int main(int argc, char* argv[])
 
 	/////////////////////////////////////////////////////////////////////
 
-	int p_gain = 10; 
-	int d_gain = 10;
+	int p_gain = 2; 
+	int d_gain = 2;
 	if (argc >= 2) {
 		p_gain = atoi(argv[1]);	
 	}
@@ -140,14 +136,13 @@ int main(int argc, char* argv[])
 
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 0, 0);
-		//cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
-		//cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
+		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
+		cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
 	}
 
 	int value;
 	int count = 0;
 	int runs = -1;
-	int alternate = 1;
 	static struct timespec start_time;
 	//static struct timespec begin_time;
 	//static struct timespec end_time;
@@ -161,9 +156,11 @@ int main(int argc, char* argv[])
 	LinuxServer server ( MPC_PORT );
 
 	double* buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
+	double* raw_buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
 	double* p_buf;
 	
 	double* ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
+	double* raw_ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
 
 	clock_gettime(TEST_CLOCK, &start_time);
 
@@ -196,6 +193,7 @@ int main(int argc, char* argv[])
 						double qpos;
 						double qvel;
 
+
 						// prepare data for sending to mpc
 						for (int joint=1; joint<=JointData::ID_R_ANKLE_ROLL; joint++) {
 							// right joints
@@ -208,7 +206,7 @@ int main(int argc, char* argv[])
 							if (value > 1023) {
 								value = 1024 - value;
 							}
-							qvel = rpm2radianspersecond(value);
+							qvel = rpm2rads_ps(value);
 							*(p_buf+20) = qvel;
 							index++;
 
@@ -225,7 +223,7 @@ int main(int argc, char* argv[])
 							if (value > 1023) {
 								value = 1024 - value;
 							}
-							qvel = rpm2radianspersecond(value);
+							qvel = rpm2rads_ps(value);
 							*(p_buf+29) = qvel;
 							index++;
 
@@ -245,12 +243,22 @@ int main(int argc, char* argv[])
 							if (value > 1023) {
 								value = 1024 - value;
 							}
-							qvel = rpm2radianspersecond(value);
+							qvel = rpm2rads_ps(value);
 							*(p_buf+20) = qvel;
 							index++;
 
 							p_buf++;
 						}
+
+
+#ifdef VERBOSE
+						printf("\nbuf  ");
+						for (int joint=1; joint<=20; joint++) {
+							raw_buf[joint] = buf[joint];
+							printf("%1.1f ", raw_buf[joint]);
+						}
+						printf("\n");
+#endif
 
 						p_buf += 20;
 
@@ -311,41 +319,81 @@ int main(int argc, char* argv[])
 						printf("\n");
 #endif
 
-						printf("S: %1.2f P: %1.2f %1.2f %1.2f %1.2f\n",
-								buf[0], buf[1], buf[2], buf[3], buf[4]);
+						//printf("S: %1.2f P: %1.2f %1.2f %1.2f %1.2f\n",
+						//		buf[0], buf[1], buf[2], buf[3], buf[4]);
 
 						if ( !data_sock.send((unsigned char*)buf, SEND_BUF_SIZE*sizeof(double)))
 						{
 							throw LinuxSocketException ( "Could not write to socket." );
 						}
 
-						memset((void*) ctrl, 0, 5*sizeof(double));
+						memset((void*) ctrl, 0, RECV_BUF_SIZE*sizeof(double));
 
 						if ( !data_sock.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double))) {
 							throw LinuxSocketException ( "Could not write to socket." );
 						}
 
-						printf("R: %1.2f P: %1.2f %1.2f %1.2f %1.2f\n",
-								ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4]);
+#ifdef VERBOSE
+						printf("ctrl ");
+						for (int joint=1; joint<=20; joint++) {
+						printf("%1.1f ", ctrl[joint]);
+						}
+						printf("\n");
+#endif
 
 						// prepare commands to joints
-						for (int joint=0; joint<20; joint++) {
-							int id = joint+1;
+						for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
 
-							param[n++] = id;
-							//param[n++] = ctrl[joint]; // d_gain
-							//param[n++] = ctrl[joint+1];// i_gain
-							//param[n++] = ctrl[joint+2];// p_gain
-							//param[n++] = 0;
-							//value = ctrl[joint+4];
-							value = ctrl[joint]; // in joint space?
+							joint_num++;
+							param[n++] = joint_num;
+							value = radian2joint(ctrl[joint]); // in joint space?
 							param[n++] = CM730::GetLowByte(value);
 							param[n++] = CM730::GetHighByte(value);
+							//printf("%d %d\t%d %d\n",
+							//		joint_num, value, joint, cm730.m_BulkReadData[joint_num].ReadWord(MX28::P_PRESENT_POSITION_L));
+							raw_ctrl[joint_num] = ctrl[joint];
+							//printf("%d ", joint_num);
+
 							joint_num++;
+							param[n++] = joint_num;
+							value = radian2joint(ctrl[joint+9]); // in joint space?
+							param[n++] = CM730::GetLowByte(value);
+							param[n++] = CM730::GetHighByte(value);
+							//printf("%d %d\t%d %d\n",
+							//		joint_num, value, joint+9, cm730.m_BulkReadData[joint_num].ReadWord(MX28::P_PRESENT_POSITION_L));
+							raw_ctrl[joint_num] = ctrl[joint+9];
+							//printf("%d ", joint_num);
 						}
 
+						id = JointData::ID_HEAD_PAN;
+						param[n++] = id;
+						value = radian2joint(ctrl[id]);
+						param[n++] = CM730::GetLowByte(value);
+						param[n++] = CM730::GetHighByte(value);
+							raw_ctrl[id] = ctrl[id];
+						joint_num++;
+							//printf("%d ", id);
+
+						id = JointData::ID_HEAD_TILT;
+						param[n++] = id;
+						value = radian2joint(ctrl[id]);
+						param[n++] = CM730::GetLowByte(value);
+						param[n++] = CM730::GetHighByte(value);
+							raw_ctrl[id] = ctrl[id];
+						joint_num++;
+							//printf("%d %f ", id, ctrl[id]);
+
+						printf("\nRecieved %d joint positions.\n", joint_num);
+
+#ifdef VERBOSE
+						for (int joint=1; joint<=20; joint++) {
+							printf("%d %f %f\n", joint, raw_buf[joint], raw_ctrl[joint]);
+						}
+#endif
+
 						if(joint_num > 0) {
-							//cm730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
+							//cm730.SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
+							cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 						}
 					}
 					else {
@@ -375,7 +423,9 @@ int main(int argc, char* argv[])
 	//printf("Total time: %fms\n", ms_diff(start_time, end_time));
 
 	free(buf);
+	free(raw_buf);
 	free(ctrl);
+	free(raw_ctrl);
 
 	return 0;
 }
