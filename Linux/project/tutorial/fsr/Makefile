@@ -8,6 +8,7 @@
 ###############################################################
 
 TARGET = fsr
+TARGET2 = file_data
 
 CXX = g++
 INCLUDE_DIRS = -I../../../include -I../../../../Framework/include
@@ -17,7 +18,7 @@ LIBS += -lpthread -lrt -ljpeg
 OBJS =	main.o
 
 
-all: darwin.a $(TARGET)
+all: darwin.a $(TARGET) $(TARGET2)
 
 darwin.a:
 	make -C ../../../build
@@ -25,8 +26,11 @@ darwin.a:
 $(TARGET): $(OBJS) ../../../lib/darwin.a
 	$(CXX) -o $(TARGET) $(OBJS) ../../../lib/darwin.a $(LIBS)
 	
+$(TARGET2): file_main.o ../../../lib/darwin.a
+	$(CXX) -o $(TARGET2) file_main.o ../../../lib/darwin.a -lpthread -lrt
+
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) file_main.o $(TARGET) $(TARGET2)
 
 libclean:
 	make -C ../../../build clean

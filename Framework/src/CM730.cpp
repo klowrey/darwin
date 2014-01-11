@@ -664,7 +664,8 @@ int CM730::BulkRead()
 		return TxRxPacket(m_BulkReadTxPacket, rxpacket, 0);
 	else
 	{
-		MakeBulkReadPacket();
+		//MakeBulkReadPacket();
+		MakeBulkReadPacketMPC();
 		return TX_FAIL;
 	}
 }

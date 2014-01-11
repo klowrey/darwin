@@ -10,6 +10,7 @@
 
 #include "CM730.h"
 #include "MX28.h"
+#include "FSR.h"
 #include "MotionModule.h"
 #include "MotionManager.h"
 #include "MotionStatus.h"

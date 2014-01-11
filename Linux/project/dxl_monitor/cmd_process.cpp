@@ -70,6 +70,12 @@ const char *GetIDString(int id)
 		case JointData::ID_HEAD_TILT:
 			return "HEAD_TILT";
 
+		case FSR::ID_R_FSR:
+			return "R_FSR";
+
+		case FSR::ID_L_FSR:
+			return "L_FSR";
+
 		case CM730::ID_CM:
 			return "SUB_BOARD";
 	}
@@ -108,7 +114,10 @@ void Scan(CM730 *cm730)
 			printf("                                  ... OK\r");
 			printf(" Check ID:%d(%s)\n", id, GetIDString(id));
 		}
-		else if(id < JointData::NUMBER_OF_JOINTS || id == CM730::ID_CM)
+		else if(id < JointData::NUMBER_OF_JOINTS
+				|| id == CM730::ID_CM
+				|| id == FSR::ID_R_FSR
+				|| id == FSR::ID_L_FSR)
 		{
 			printf("                                  ... FAIL\r");
 			printf(" Check ID:%d(%s)\n", id, GetIDString(id));
@@ -179,6 +188,45 @@ void Dump(CM730 *cm730, int id)
 		printf( " RIGHT_MIC               (R) [%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
 
 		printf( "\n" );
+	}
+	else if (id == FSR::ID_R_FSR || id == FSR::ID_L_FSR)
+	{
+		if(cm730->ReadTable(id, FSR::P_MODEL_NUMBER_L, FSR::P_PRESENT_VOLTAGE, &table[FSR::P_MODEL_NUMBER_L], 0) != CM730::SUCCESS)
+		{
+			printf(" Can not read table!\n");
+			return;
+		}
+
+		printf( "\n" );
+		printf( " [EEPROM AREA]\n" );
+		addr = FSR::P_MODEL_NUMBER_L; value = CM730::MakeWord(table[addr], table[addr+1]);
+		printf( " MODEL_NUMBER            (R) [%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
+		addr = FSR::P_VERSION; value = table[addr];
+		printf( " VERSION                 (R) [%.3d]:%5d\n", addr, value);
+		addr = FSR::P_ID; value = table[addr];
+		printf( " ID                     (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_BAUD_RATE; value = table[addr];
+		printf( " BAUD_RATE              (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_RETURN_DELAY_TIME; value = table[addr];
+		printf( " RETURN_DELAY_TIME      (R/W)[%.3d]:%5d\n", addr, value);
+
+		printf( "\n" );
+		printf( " [RAM AREA]\n" );
+		addr = FSR::P_LED; value = table[addr];
+		printf( " LED                    (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_FSR1_L; value = CM730::MakeWord(table[addr], table[addr+1]);
+		printf( " FSR1                   (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_FSR2_L; value = CM730::MakeWord(table[addr], table[addr+1]);
+		printf( " FSR2                   (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_FSR3_L; value = CM730::MakeWord(table[addr], table[addr+1]);
+		printf( " FSR3                   (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_FSR4_L; value = CM730::MakeWord(table[addr], table[addr+1]);
+		printf( " FSR4                   (R/W)[%.3d]:%5d (L:0x%.2X H:0x%.2X)\n", addr, value, table[addr], table[addr+1]);
+		addr = FSR::P_FSR_X; value = table[addr];
+		printf( " FSRX                   (R/W)[%.3d]:%5d\n", addr, value);
+		addr = FSR::P_FSR_Y; value = table[addr];
+		printf( " FSRY                   (R/W)[%.3d]:%5d\n", addr, value);
+
 	}
 	else // Actuator
 	{		

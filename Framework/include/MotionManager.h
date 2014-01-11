@@ -11,6 +11,7 @@
 #include <list>
 #include <fstream>
 #include <iostream>
+#include <time.h>
 #include "MotionStatus.h"
 #include "MotionModule.h"
 #include "CM730.h"
@@ -36,6 +37,9 @@ namespace Robot
 			bool m_IsRunning;
 			bool m_IsThreadRunning;
 			bool m_IsLogging;
+
+			struct timespec start_time;
+			struct timespec ms_time;
 
 			std::ofstream m_LogFileStream;
 

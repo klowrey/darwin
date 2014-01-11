@@ -27,6 +27,8 @@ MotionManager::MotionManager() :
 {
 	for(int i = 0; i < JointData::NUMBER_OF_JOINTS; i++)
 		m_Offset[i] = 0;
+
+    	clock_gettime(CLOCK_MONOTONIC,&start_time);
 }
 
 MotionManager::~MotionManager()
@@ -117,7 +119,7 @@ void MotionManager::StartLogging()
 	int count = 0;
 	while(1)
 	{
-		sprintf(szFile, "Logs/Log%d.csv", count);
+		sprintf(szFile, "Log%d.csv", count);
 		if(0 != access(szFile, F_OK))
 			break;
 		count++;
@@ -125,9 +127,13 @@ void MotionManager::StartLogging()
 	}
 
 	m_LogFileStream.open(szFile, std::ios::out);
+	m_LogFileStream << "MS_TIME,";
 	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
-		m_LogFileStream << "ID_" << id << "_GP,ID_" << id << "_PP,";
-	m_LogFileStream << "GyroFB,GyroRL,AccelFB,AccelRL,L_FSR_X,L_FSR_Y,R_FSR_X,R_FSR_Y" << std::endl;
+		m_LogFileStream << "ID_" << id << "_GP,ID_" << id << "_PP,ID_" << id << "_P,ID_" << id << "_D,";
+	//m_LogFileStream << "GyroFB,GyroRL,AccelFB,AccelRL,L_FSR_X,L_FSR_Y,R_FSR_X,R_FSR_Y" << std::endl;
+	m_LogFileStream << "GyroZ,GyroY,GyroX,AccelZ,AccelY,AccelX,";
+	m_LogFileStream << "L_FSR_1,L_FSR_2,L_FSR_3,L_FSR_4,";
+	m_LogFileStream << "R_FSR_1,R_FSR_2,R_FSR_3,R_FSR_4," << std::endl;
 
 	m_IsLogging = true;
 }
@@ -166,6 +172,21 @@ void MotionManager::SaveINISettings(minIni* ini, const std::string &section)
 		ini->put(section, key, m_Offset[i]);
 	}
 }
+
+static double ms_diff(timespec start, timespec end)
+{
+	timespec temp;
+	if ((end.tv_nsec-start.tv_nsec)<0) {
+		temp.tv_sec = end.tv_sec-start.tv_sec-1;
+		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+	} else {
+		temp.tv_sec = end.tv_sec-start.tv_sec;
+		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+	}
+	return (double)(temp.tv_sec*1000.0+temp.tv_nsec/1000000.0);
+}
+
+
 
 #define GYRO_WINDOW_SIZE    100
 #define ACCEL_WINDOW_SIZE   30
@@ -326,17 +347,44 @@ void MotionManager::Process()
 
 	if(m_IsLogging)
 	{
-		for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
-			m_LogFileStream << MotionStatus::m_CurrentJoints.GetValue(id) << "," << m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L) << ",";
+		clock_gettime(CLOCK_MONOTONIC,&ms_time);
+		m_LogFileStream << ms_diff(start_time, ms_time) << ",";
 
+		for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
+		{
+			m_LogFileStream << MotionStatus::m_CurrentJoints.GetValue(id) << ",";
+			m_LogFileStream << m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L) << ",";
+			m_LogFileStream << MotionStatus::m_CurrentJoints.GetPGain(id) << ",";
+			m_LogFileStream << MotionStatus::m_CurrentJoints.GetDGain(id) << ",";
+		}
+
+		m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L) << ",";
 		m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L) << ",";
 		m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L) << ",";
 		m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L) << ",";
 		m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L) << ",";
-		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadByte(FSR::P_FSR_X) << ",";
-		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadByte(FSR::P_FSR_Y) << ",";
-		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadByte(FSR::P_FSR_X) << ",";
-		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadByte(FSR::P_FSR_Y) << ",";
+
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L) << ",";
+
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L) << ",";
+
+		// Original
+		//m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadByte(FSR::P_FSR_X) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadByte(FSR::P_FSR_Y) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadByte(FSR::P_FSR_X) << ",";
+		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadByte(FSR::P_FSR_Y) << ",";
+
 		m_LogFileStream << std::endl;
 	}
 
