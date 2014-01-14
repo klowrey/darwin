@@ -280,6 +280,27 @@ int main(int argc, char* argv[])
 						p_buf++;
 						index+=3;
 
+						// FSR Feet, Right and Left
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)) / 1000.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L)) / 1000.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L)) / 1000.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L)) / 1000.0;
+						p_buf++;
+						index+=4;
+
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L)) / 1000.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L)) / 1000.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L)) / 1000.0;
+						p_buf++;
+						*p_buf = (cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L)) / 1000.0;
+						p_buf++;
+						index+=4;
+
 
 						///////// Verify Output
 #ifdef VERBOSE
@@ -336,7 +357,7 @@ int main(int argc, char* argv[])
 #ifdef VERBOSE
 						printf("ctrl ");
 						for (int joint=1; joint<=20; joint++) {
-						printf("%1.1f ", ctrl[joint]);
+							printf("%1.1f ", ctrl[joint]);
 						}
 						printf("\n");
 #endif
@@ -370,18 +391,18 @@ int main(int argc, char* argv[])
 						value = radian2joint(ctrl[id]);
 						param[n++] = CM730::GetLowByte(value);
 						param[n++] = CM730::GetHighByte(value);
-							raw_ctrl[id] = ctrl[id];
+						raw_ctrl[id] = ctrl[id];
 						joint_num++;
-							//printf("%d ", id);
+						//printf("%d ", id);
 
 						id = JointData::ID_HEAD_TILT;
 						param[n++] = id;
 						value = radian2joint(ctrl[id]);
 						param[n++] = CM730::GetLowByte(value);
 						param[n++] = CM730::GetHighByte(value);
-							raw_ctrl[id] = ctrl[id];
+						raw_ctrl[id] = ctrl[id];
 						joint_num++;
-							//printf("%d %f ", id, ctrl[id]);
+						//printf("%d %f ", id, ctrl[id]);
 
 						printf("\nRecieved %d joint positions.\n", joint_num);
 
