@@ -14,7 +14,7 @@ INCLUDE_DIRS = -I../../../include -I../../../../Framework/include
 CXX = g++
 CXXFLAGS += -O2 -DLINUX -Wall $(INCLUDE_DIRS)
 #CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
-LFLAGS += -lpthread -ljpeg
+LFLAGS += -lpthread -lrt -ljpeg
 
 OBJECTS =   main.o
 
@@ -32,7 +32,7 @@ darwin.a:
 	make -C ../../../build
 
 $(TARGET): darwin.a $(OBJECTS)
-	$(CXX) $(CFLAGS) $(LFLAGS) $(OBJECTS) ../../../lib/darwin.a -o $(TARGET)
+	$(CXX) -o $(TARGET) $(OBJECTS) ../../../lib/darwin.a $(LFLAGS)
 	chmod 755 $(TARGET)
 
 # useful to make a backup "make tgz"

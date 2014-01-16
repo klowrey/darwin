@@ -9,7 +9,6 @@
 #include "CM730.h"
 #include "MotionStatus.h"
 
-
 #include <time.h>
 
 using namespace Robot;

@@ -373,7 +373,7 @@ void MotionManager::Process()
 		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L) << ",";
 		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L) << ",";
 		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L) << ",";
-		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L) << ",";
+		m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L);
 
 		// Original
 		//m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L) << ",";

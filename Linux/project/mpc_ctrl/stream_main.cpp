@@ -92,8 +92,8 @@ double joint2radian(int joint_value) {
 }
 
 int radian2joint(double radian) {
-	return (int)(radian * 651.898650256) + 2048;;
-}
+	return (int)(radian * 651.898650256) + 2048;
+
 
 double rpm2rads_ps(int rpm) {
 	//return rpm * 0.11 * 2 * 3.14159265 / 60;
@@ -262,7 +262,7 @@ int main(int argc, char* argv[])
 
 						p_buf += 20;
 
-						// gyroscope dps to rps
+						// gyroscope dps to rad_ps
 						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)-512)*0.017453229251;
 						p_buf++;
 						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)-512)*0.017453229251;
@@ -271,7 +271,7 @@ int main(int argc, char* argv[])
 						p_buf++;
 						index+=3;
 
-						// accelerometer +- 4g's
+						// accelerometer in G's (range is +/- 4g's) 
 						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)-512) / 128.0;
 						p_buf++;
 						*p_buf = (cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)-512) / 128.0;
