@@ -203,11 +203,11 @@ void LinuxCM730::HighPriorityRelease()
 double LinuxCM730::GetCurrentTime()
 {
 	/*
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
 
-	return ((double)tv.tv_sec*1000.0 + (double)tv.tv_usec/1000.0);
-	*/
+		return ((double)tv.tv_sec*1000.0 + (double)tv.tv_usec/1000.0);
+		*/
 	static struct timespec ts;
 
 	//clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);

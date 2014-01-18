@@ -25,6 +25,7 @@ namespace Robot
 		private:
 			int m_sock;
 			sockaddr_in m_addr;
+			bool non_blocking;
 
 		public:
 			static const int MAXHOSTNAME = 200;
@@ -50,6 +51,8 @@ namespace Robot
 			int recv ( void* data, int length ) const;
 
 			void set_non_blocking ( const bool );
+			bool selectRead(int tmout) const;
+			bool selectWrite(int tmout) const;
 
 			bool is_valid() const { return m_sock != -1; }
 	};
@@ -72,6 +75,7 @@ namespace Robot
 			LinuxServer ( int port );
 			LinuxServer (){};
 			virtual ~LinuxServer();
+			void set_non_blocking(const bool b);
 
 			const LinuxServer& operator << ( const std::string& ) const;
 			const LinuxServer& operator << ( const int& ) const;

@@ -10,12 +10,13 @@
 #include <fcntl.h>
 #include <sstream>
 #include "LinuxNetwork.h"
+#include <stdio.h>
 
 using namespace Robot;
 using namespace std;
 
 
-LinuxSocket::LinuxSocket() : m_sock ( -1 )
+LinuxSocket::LinuxSocket() : m_sock ( -1 ), non_blocking(false)
 {
 	memset ( &m_addr, 0, sizeof ( m_addr ) );
 }
@@ -114,61 +115,150 @@ bool LinuxSocket::send ( const std::string s ) const
 
 bool LinuxSocket::send ( void* data, int length ) const
 {
-	int status = ::send ( m_sock, data, length, MSG_NOSIGNAL );
-	if ( status == -1 )
-	{
-		return false;
-	}
-	else
-	{
+	if (non_blocking) {
+		int ndone = 0;
+		char* buf = (char*)data;
+
+		while (ndone < length) {
+
+			if (selectWrite(-1)) {
+				int status = ::send(m_sock, (void*)(buf+ndone), length-ndone, MSG_NOSIGNAL);
+				if ( status == -1 ) {
+					cout<<"status == -1   errno == "<<errno<<"  in Socket::send\n";
+					return false;
+				}
+				else if ( status == 0 ) {
+					// connection has been broken
+					return false;
+				}
+
+				// all is good
+				ndone += status;
+			}
+		}
 		return true;
+	}
+	else {
+		int status = ::send(m_sock, data, length, MSG_NOSIGNAL);
+		if ( status == -1 )
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
 	}
 }
 
 int LinuxSocket::recv ( std::string& s ) const
 {
-	char buf [ MAXRECV + 1 ];
-
-	s = "";
-
-	memset ( buf, 0, MAXRECV + 1 );
-
-	int status = ::recv ( m_sock, buf, MAXRECV, 0 );
-
-	if ( status == -1 )
-	{
-		cout << "status == -1   errno == " << errno << "  in Socket::recv\n";
+	if (non_blocking) {
 		return 0;
 	}
-	else if ( status == 0 )
-	{
-		return 0;
-	}
-	else
-	{
-		s = buf;
-		return status;
+	else {
+		char buf[MAXRECV+1];
+		s = "";
+
+		memset(buf, 0, MAXRECV+1);
+
+		int status = ::recv(m_sock, buf, MAXRECV, 0);
+
+		if ( status == -1 ) {
+			cout<<"status == -1   errno == "<<errno<<"  in Socket::recv\n";
+			return 0;
+		}
+		else if ( status == 0 ) {
+			return 0;
+		}
+		else {
+			s = buf;
+			return status;
+		}
 	}
 }
 
 int LinuxSocket::recv ( void* data, int length ) const
 {
-	int status = ::recv ( m_sock, data, length, 0 );
+	if (non_blocking) {
+		int ndone=0;
+		char* buf = (char*)data;
 
-	if ( status == -1 )
-	{
-		cout << "status == -1   errno == " << errno << "  in Socket::recv\n";
-		return 0;
-	}
-	else if ( status == 0 )
-	{
-		return 0;
-	}
+		while (ndone < length) {
+			if (selectRead(-1)) {
+				int status = ::recv ( m_sock, (void*)(buf+ndone), length-ndone, 0 );
+				if ( status == -1 ) {
+					cout<<"status == -1   errno == "<<errno<<"  in Socket::recv\n";
+					return 0;
+				}
+				else if ( status == 0 ) {
+					// connection has been broken
+					return 0;
+				}
 
-	return status;
+				// all is good
+				ndone += status;
+			}
+		}
+		return ndone;
+	}
+	else {
+		// blocking code will read everything at once
+		int status = ::recv ( m_sock, data, length, 0 );
+
+		if ( status == -1 ) {
+			cout<<"status == -1   errno == "<<errno<<"  in Socket::recv\n";
+			return 0;
+		}
+		else if ( status == 0 ) {
+			return 0;
+		}
+
+		return status;
+	}
 }
 
-bool LinuxSocket::connect ( const std::string host, const int port )
+bool LinuxSocket::selectRead(int tmout) const
+{
+	fd_set set;
+	FD_ZERO(&set);
+	FD_SET(m_sock, &set);
+
+	// timeout structure
+	struct timeval tm;
+	tm.tv_sec = tmout/1000;
+	tm.tv_usec = ((long)(tmout%1000)) * 1000;
+
+	int result = select((int)m_sock+1, &set, 0, 0, tmout>=0 ? &tm : 0);
+
+	// check for error
+	if( result==-1 )
+		return false;
+
+	return true;
+}
+
+bool LinuxSocket::selectWrite(int tmout) const
+{
+	fd_set set;
+	FD_ZERO(&set);
+	FD_SET(m_sock, &set);
+
+	// timeout structure
+	struct timeval tm;
+	tm.tv_sec = tmout/1000;
+	tm.tv_usec = ((long)(tmout%1000)) * 1000;
+
+	int result = select((int)m_sock+1, 0, &set, 0, tmout>=0 ? &tm : 0);
+
+	// check for error
+	if( result==-1)
+		return false;
+
+	return true;
+}
+
+bool LinuxSocket::connect(const std::string host, const int port)
 {
 	if ( ! is_valid() ) return false;
 
@@ -187,27 +277,28 @@ bool LinuxSocket::connect ( const std::string host, const int port )
 		return false;
 }
 
-void LinuxSocket::set_non_blocking ( const bool b )
+void LinuxSocket::set_non_blocking(const bool b)
 {
 	int opts;
 
-	opts = fcntl ( m_sock, F_GETFL );
+	opts = fcntl(m_sock, F_GETFL);
 
-	if ( opts < 0 )
-	{
+	if (opts < 0) {
 		return;
 	}
 
-	if ( b )
-		opts = ( opts | O_NONBLOCK );
+	if (b)
+		opts = (opts | O_NONBLOCK);
 	else
-		opts = ( opts & ~O_NONBLOCK );
+		opts = (opts & ~O_NONBLOCK);
 
-	fcntl ( m_sock,
-			F_SETFL,opts );
+	fcntl(m_sock, F_SETFL, opts);
+
+	non_blocking = b;
+	printf("Socket is %s\n", (non_blocking)?"Non-Blocking":"Blocking");
 }
 
-
+// ----------------------------------------------------------------------
 
 LinuxServer::LinuxServer ( int port )
 {
@@ -229,6 +320,11 @@ LinuxServer::LinuxServer ( int port )
 
 LinuxServer::~LinuxServer()
 {
+}
+
+void LinuxServer::set_non_blocking(const bool b)
+{
+	LinuxSocket::set_non_blocking(b);
 }
 
 const LinuxServer& LinuxServer::operator << ( const std::string& s ) const
@@ -279,5 +375,6 @@ bool LinuxServer::send ( unsigned char* data, int length )
 
 int LinuxServer::recv ( unsigned char* data, int length )
 {
-	return LinuxSocket::recv(data, length);
+	int ret = LinuxSocket::recv(data, length);
+	return ret;
 }
