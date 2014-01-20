@@ -23,56 +23,55 @@ const int SEND_BUF_SIZE = 47;
 const int RECV_BUF_SIZE = 21; // time + position
 
 /*
-   enum
-   {
-   1 ID_R_SHOULDER_PITCH     = 1,
-   2 ID_R_SHOULDER_ROLL      = 3,
-   3 ID_R_ELBOW              = 5,
-   4 ID_R_HIP_YAW            = 7,
-   5 ID_R_HIP_ROLL           = 9,
-   6 ID_R_HIP_PITCH          = 11,
-   7 ID_R_KNEE               = 13,
-   8 ID_R_ANKLE_PITCH        = 15,
-   9 ID_R_ANKLE_ROLL         = 17,
+	1  ID_R_SHOULDER_PITCH     = 1,
+	2  ID_R_SHOULDER_ROLL      = 3,
+	3  ID_R_ELBOW              = 5,
+	4  ID_R_HIP_YAW            = 7,
+	5  ID_R_HIP_ROLL           = 9,
+	6  ID_R_HIP_PITCH          = 11,
+	7  ID_R_KNEE               = 13,
+	8  ID_R_ANKLE_PITCH        = 15,
+	9  ID_R_ANKLE_ROLL         = 17,
 
-   10 ID_L_SHOULDER_PITCH     = 2,
-   11 ID_L_SHOULDER_ROLL      = 4,
-   12 ID_L_ELBOW              = 6,
-   13 ID_L_HIP_YAW            = 8,
-   14 ID_L_HIP_ROLL           = 10,
-   15 ID_L_HIP_PITCH          = 12,
-   16 ID_L_KNEE               = 14,
-   17 ID_L_ANKLE_PITCH        = 16,
-   18 ID_L_ANKLE_ROLL         = 18,
+	10 ID_L_SHOULDER_PITCH     = 2,
+	11 ID_L_SHOULDER_ROLL      = 4,
+	12 ID_L_ELBOW              = 6,
+	13 ID_L_HIP_YAW            = 8,
+	14 ID_L_HIP_ROLL           = 10,
+	15 ID_L_HIP_PITCH          = 12,
+	16 ID_L_KNEE               = 14,
+	17 ID_L_ANKLE_PITCH        = 16,
+	18 ID_L_ANKLE_ROLL         = 18,
 
-   19 ID_HEAD_PAN             = 19,
-   20 ID_HEAD_TILT            = 20,
+	19 ID_HEAD_PAN             = 19,
+	20 ID_HEAD_TILT            = 20,
 
-   ID_R_SHOULDER_PITCH     = 1,
-   ID_L_SHOULDER_PITCH     = 2,
-   ID_R_SHOULDER_ROLL      = 3,
-   ID_L_SHOULDER_ROLL      = 4,
-   ID_R_ELBOW              = 5,
-   ID_L_ELBOW              = 6,
-   ID_R_HIP_YAW            = 7,
-   ID_L_HIP_YAW            = 8,
-   ID_R_HIP_ROLL           = 9,
+	=========
 
-   ID_L_HIP_ROLL           = 10,
-   ID_R_HIP_PITCH          = 11,
-   ID_L_HIP_PITCH          = 12,
-   ID_R_KNEE               = 13,
-   ID_L_KNEE               = 14,
-   ID_R_ANKLE_PITCH        = 15,
-   ID_L_ANKLE_PITCH        = 16,
-   ID_R_ANKLE_ROLL         = 17,
-   ID_L_ANKLE_ROLL         = 18,
+	1  ID_R_SHOULDER_PITCH     = 1,
+	10 ID_L_SHOULDER_PITCH     = 2,
+	2  ID_R_SHOULDER_ROLL      = 3,
+	11 ID_L_SHOULDER_ROLL      = 4,
+	3  ID_R_ELBOW              = 5,
+	12 ID_L_ELBOW              = 6,
 
-   ID_HEAD_PAN             = 19,
-   ID_HEAD_TILT            = 20,
- 
-   };
-   */
+	4  ID_R_HIP_YAW            = 7,
+	13 ID_L_HIP_YAW            = 8,
+	5  ID_R_HIP_ROLL           = 9,
+	14 ID_L_HIP_ROLL           = 10,
+	6  ID_R_HIP_PITCH          = 11,
+	15 ID_L_HIP_PITCH          = 12,
+	7  ID_R_KNEE               = 13,
+	16 ID_L_KNEE               = 14,
+	8  ID_R_ANKLE_PITCH        = 15,
+	17 ID_L_ANKLE_PITCH        = 16,
+	9  ID_R_ANKLE_ROLL         = 17,
+	18 ID_L_ANKLE_ROLL         = 18,
+
+	19 ID_HEAD_PAN             = 19,
+	20 ID_HEAD_TILT            = 20,
+
+*/
 
 void print_send_buf(double* buf)
 {

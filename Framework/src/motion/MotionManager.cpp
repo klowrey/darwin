@@ -128,8 +128,22 @@ void MotionManager::StartLogging()
 
 	m_LogFileStream.open(szFile, std::ios::out);
 	m_LogFileStream << "MS_TIME,";
-	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
+	/*
+	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++) {
+		m_LogFileStream << "ID_" << id << "_GP,;
+	}
+	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++) {
 		m_LogFileStream << "ID_" << id << "_GP,ID_" << id << "_PP,ID_" << id << "_P,ID_" << id << "_D,";
+	}
+	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++) {
+		m_LogFileStream << "ID_" << id << "_GP,ID_" << id << "_PP,ID_" << id << "_P,ID_" << id << "_D,";
+	}
+	for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++) {
+		m_LogFileStream << "ID_" << id << "_GP,ID_" << id << "_PP,ID_" << id << "_P,ID_" << id << "_D,";
+	}
+	*/
+	m_LogFileStream <<"goal positions, present positions, speed,";
+
 	//m_LogFileStream << "GyroFB,GyroRL,AccelFB,AccelRL,L_FSR_X,L_FSR_Y,R_FSR_X,R_FSR_Y" << std::endl;
 	m_LogFileStream << "GyroZ,GyroY,GyroX,AccelZ,AccelY,AccelX,";
 	m_LogFileStream << "L_FSR_1,L_FSR_2,L_FSR_3,L_FSR_4,";
@@ -326,18 +340,39 @@ void MotionManager::Process()
 		clock_gettime(CLOCK_MONOTONIC,&ms_time);
 		m_LogFileStream << sec_diff(start_time, ms_time) << ",";
 
-		for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
-		{
+		// Goal Position
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_LogFileStream << joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)) << ",";
 		}
-		for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
-		{
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_LogFileStream << joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)) << ",";
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_LogFileStream << joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)) << ",";
+		}
+
+		// Positions
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_LogFileStream << joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)) << ",";
 		}
-		for(int id = 1; id < JointData::NUMBER_OF_JOINTS; id++)
-		{
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_LogFileStream << joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)) << ",";
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_LogFileStream << joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)) << ",";
+		}
+
+		// Speed
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_LogFileStream << j_rpm2rads_ps(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L)) << ",";
 		}
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_LogFileStream << j_rpm2rads_ps(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L)) << ",";
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_LogFileStream << j_rpm2rads_ps(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L)) << ",";
+		}
+
 		//m_LogFileStream << MotionStatus::m_CurrentJoints.GetPGain(id) << ",";
 		//m_LogFileStream << MotionStatus::m_CurrentJoints.GetDGain(id) << ",";
 
