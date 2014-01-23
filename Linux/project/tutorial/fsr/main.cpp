@@ -44,8 +44,8 @@ void* walk_thread(void* ptr)
 		int ch = _getch();
 		if(ch == 0x20) {
 			if(Walking::GetInstance()->IsRunning() == true) {
-				MotionManager::GetInstance()->StopLogging();
 				Walking::GetInstance()->Stop();
+				MotionManager::GetInstance()->StopLogging();
 			}
 			else {
 				MotionManager::GetInstance()->StartLogging();

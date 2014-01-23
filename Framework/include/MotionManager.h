@@ -11,6 +11,7 @@
 #include <list>
 #include <fstream>
 #include <iostream>
+#include <vector>
 #include <time.h>
 #include "MotionStatus.h"
 #include "MotionModule.h"
@@ -43,6 +44,7 @@ namespace Robot
 			struct timespec ms_time;
 
 			std::ofstream m_LogFileStream;
+			std::vector<int> m_logBuffer;
 
 			MotionManager();
 
