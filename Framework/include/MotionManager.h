@@ -72,6 +72,7 @@ namespace Robot
 
 			void StartLogging();
 			void StopLogging();
+			bool IsLogging();
 
 			void LoadINISettings(minIni* ini);
 			void LoadINISettings(minIni* ini, const std::string &section);
