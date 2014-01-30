@@ -37,7 +37,7 @@ namespace Robot
 
 			// Server initialization
 			bool create();
-			bool bind ( const int port );
+			bool bind ( const char* hostname, const int port );
 			bool listen() const;
 			bool accept ( LinuxSocket& ) const;
 
@@ -72,7 +72,7 @@ namespace Robot
 	class LinuxServer : private LinuxSocket
 	{
 		public:
-			LinuxServer ( int port );
+			LinuxServer ( const char* hostname, int port );
 			LinuxServer (){};
 			virtual ~LinuxServer();
 			void set_non_blocking(const bool b);

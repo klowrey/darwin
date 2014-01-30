@@ -19,8 +19,8 @@
 using namespace Robot;
 using namespace std;
 
-const int SEND_BUF_SIZE = 47;
 const int RECV_BUF_SIZE = 21; // time + position
+const int SEND_BUF_SIZE = 47;
 
 /*
 	1  ID_R_SHOULDER_PITCH     = 1,
@@ -158,14 +158,16 @@ int main(int argc, char* argv[])
 	clockid_t TEST_CLOCK = CLOCK_MONOTONIC;
 
 	LinuxServer data_sock;
-	LinuxServer server ( MPC_PORT );
+	LinuxServer server ( "128.208.4.38", MPC_PORT );
 
 	double* buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
-	double* raw_buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
 	double* p_buf;
 
 	double* ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
+#ifdef VERBOSE
+	double* raw_buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
 	double* raw_ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
+#endif
 
 	clock_gettime(TEST_CLOCK, &start_time);
 
@@ -175,7 +177,7 @@ int main(int argc, char* argv[])
 		{
 			cout << "[Waiting..]" << endl;            
 			server.accept(data_sock); // tcp_nodelay, but a blocking port
-			data_sock.set_non_blocking(true);
+			//data_sock.set_non_blocking(true);
 			cout << "[Accepted..]" << endl;
 
 			try
@@ -268,11 +270,11 @@ int main(int argc, char* argv[])
 						index+=3;
 
 						// accelerometer in G's (range is +/- 4g's) 
-						*p_buf = accel2g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
+						*p_buf = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
 						p_buf++;
-						*p_buf = accel2g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
+						*p_buf = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
 						p_buf++;
-						*p_buf = accel2g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
+						*p_buf = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
 						p_buf++;
 						index+=3;
 
@@ -335,7 +337,7 @@ int main(int argc, char* argv[])
 							param[n++] = CM730::GetHighByte(value);
 							//printf("%d %d\t%d %d\n",
 							//		joint_num, value, joint, cm730.m_BulkReadData[joint_num].ReadWord(MX28::P_PRESENT_POSITION_L));
-							raw_ctrl[joint_num] = ctrl[joint];
+							//raw_ctrl[joint_num] = ctrl[joint];
 							//printf("%d ", joint_num);
 
 							joint_num++;
@@ -345,7 +347,7 @@ int main(int argc, char* argv[])
 							param[n++] = CM730::GetHighByte(value);
 							//printf("%d %d\t%d %d\n",
 							//		joint_num, value, joint+9, cm730.m_BulkReadData[joint_num].ReadWord(MX28::P_PRESENT_POSITION_L));
-							raw_ctrl[joint_num] = ctrl[joint+9];
+							//raw_ctrl[joint_num] = ctrl[joint+9];
 							//printf("%d ", joint_num);
 						}
 
@@ -354,7 +356,7 @@ int main(int argc, char* argv[])
 						value = radian2joint(ctrl[id]);
 						param[n++] = CM730::GetLowByte(value);
 						param[n++] = CM730::GetHighByte(value);
-						raw_ctrl[id] = ctrl[id];
+						//raw_ctrl[id] = ctrl[id];
 						joint_num++;
 						//printf("%d ", id);
 
@@ -363,7 +365,7 @@ int main(int argc, char* argv[])
 						value = radian2joint(ctrl[id]);
 						param[n++] = CM730::GetLowByte(value);
 						param[n++] = CM730::GetHighByte(value);
-						raw_ctrl[id] = ctrl[id];
+						//raw_ctrl[id] = ctrl[id];
 						joint_num++;
 						//printf("%d %f ", id, ctrl[id]);
 
@@ -377,7 +379,8 @@ int main(int argc, char* argv[])
 
 						if(joint_num > 0) {
 							//cm730.SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
-							cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
+
+							//cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 						}
 					}
 					else {
@@ -407,9 +410,11 @@ int main(int argc, char* argv[])
 	//printf("Total time: %fms\n", sec_diff(start_time, end_time));
 
 	free(buf);
-	free(raw_buf);
 	free(ctrl);
+#ifdef VERBOSE
+	free(raw_buf);
 	free(raw_ctrl);
+#endif
 
 	return 0;
 }

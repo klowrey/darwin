@@ -44,7 +44,7 @@ bool LinuxSocket::create()
 	return true;
 }
 
-bool LinuxSocket::bind ( const int port ) 
+bool LinuxSocket::bind ( const char* hostname, const int port ) 
 {
 	if ( ! is_valid() )
 	{
@@ -52,7 +52,8 @@ bool LinuxSocket::bind ( const int port )
 	}
 
 	m_addr.sin_family = AF_INET;
-	m_addr.sin_addr.s_addr = INADDR_ANY;
+	//m_addr.sin_addr.s_addr = INADDR_ANY;
+	inet_aton(hostname, &m_addr.sin_addr);
 	m_addr.sin_port = htons ( port );
 
 	int bind_return = ::bind ( m_sock,
@@ -300,14 +301,14 @@ void LinuxSocket::set_non_blocking(const bool b)
 
 // ----------------------------------------------------------------------
 
-LinuxServer::LinuxServer ( int port )
+LinuxServer::LinuxServer ( const char* hostname, int port )
 {
 	if ( ! LinuxSocket::create() )
 	{
 		throw LinuxSocketException ( "Could not create server socket." );
 	}
 
-	if ( ! LinuxSocket::bind ( port ) )
+	if ( ! LinuxSocket::bind ( hostname, port ) )
 	{
 		throw LinuxSocketException ( "Could not bind to port." );
 	}

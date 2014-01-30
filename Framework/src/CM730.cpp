@@ -1009,11 +1009,11 @@ void CM730::MakeBulkReadPacketMPC()
 
 	if(Ping(CM730::ID_CM, 0) == SUCCESS)
 	{
-		//m_BulkReadTxPacket[PARAMETER+3*number+1] = 30;
-		m_BulkReadTxPacket[PARAMETER+3*number+1] = 12;
+		m_BulkReadTxPacket[PARAMETER+3*number+1] = 30; // 1
+		//2 m_BulkReadTxPacket[PARAMETER+3*number+1] = 12; // 2
 		m_BulkReadTxPacket[PARAMETER+3*number+2] = CM730::ID_CM;
-		//m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER;
-		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_GYRO_Z_L;
+		m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_DXL_POWER; // 1
+		//2 m_BulkReadTxPacket[PARAMETER+3*number+3] = CM730::P_GYRO_Z_L; // 2
 		number++;
 	}
 	else {

@@ -18,14 +18,10 @@
 #include "StatusCheck.h"
 #include "VisionMode.h"
 
-#ifdef MX28_1024
-#define MOTION_FILE_PATH    "../../../Data/motion_1024.bin"
-#else
 #define MOTION_FILE_PATH    "../../../Data/motion_4096.bin"
-#endif
 
 #define INI_FILE_PATH       "../../../Data/config.ini"
-#define SCRIPT_FILE_PATH    "script.asc"
+#define SCRIPT_FILE_PATH    "data_script.asc"
 
 #define U2D_DEV_NAME0       "/dev/ttyUSB0"
 #define U2D_DEV_NAME1       "/dev/ttyUSB1"
@@ -119,23 +115,13 @@ int main(void)
 
     if(0 < firm_ver && firm_ver < 27)
     {
-#ifdef MX28_1024
-        Action::GetInstance()->LoadFile(MOTION_FILE_PATH);
-#else
         fprintf(stderr, "MX-28's firmware is not support 4096 resolution!! \n");
         fprintf(stderr, "Upgrade MX-28's firmware to version 27(0x1B) or higher.\n\n");
         exit(0);
-#endif
     }
     else if(27 <= firm_ver)
     {
-#ifdef MX28_1024
-        fprintf(stderr, "MX-28's firmware is not support 1024 resolution!! \n");
-        fprintf(stderr, "Remove '#define MX28_1024' from 'MX28.h' file and rebuild.\n\n");
-        exit(0);
-#else
         Action::GetInstance()->LoadFile((char*)MOTION_FILE_PATH);
-#endif
     }
     else
         exit(0);
@@ -146,6 +132,7 @@ int main(void)
     cm730.WriteByte(CM730::P_LED_PANNEL, 0x01|0x02|0x04, NULL);
 
     LinuxActionScript::PlayMP3("../../../Data/mp3/Demonstration ready mode.mp3");
+	 printf("Ready...\n");
     Action::GetInstance()->Start(15);
     while(Action::GetInstance()->IsRunning()) usleep(8*1000);
 
