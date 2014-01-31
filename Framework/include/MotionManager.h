@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <time.h>
+#include "LinuxNetwork.h"
 #include "MotionStatus.h"
 #include "MotionModule.h"
 #include "CM730.h"
@@ -46,9 +47,16 @@ namespace Robot
 			std::ofstream m_LogFileStream;
 			std::vector<int> m_logBuffer;
 
+			pthread_t network_Thread; // thread structure
+			std::vector<double> m_streamBuffer;
+
+			LinuxServer data_sock;
+			bool m_IsStreaming;
+
 			MotionManager();
 
 		protected:
+			//static void *ServerListener(void* param);
 
 		public:
 			bool DEBUG_PRINT;
@@ -69,6 +77,10 @@ namespace Robot
 			void ResetGyroCalibration() { m_CalibrationStatus = 0; m_FBGyroCenter = 512; m_RLGyroCenter = 512; }
 			int GetCalibrationStatus() { return m_CalibrationStatus; }
 			void SetJointDisable(int index);
+
+			void StartStreaming();
+			void StopStreaming();
+			bool IsStreaming();
 
 			void StartLogging();
 			void StopLogging();

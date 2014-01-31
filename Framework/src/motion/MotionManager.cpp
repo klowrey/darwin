@@ -12,7 +12,11 @@
 #include "MX28.h"
 #include "MotionManager.h"
 
+#define SEND_BUF_SIZE 75 
+#define MPC_PORT 13131
+
 using namespace Robot;
+using namespace std;
 
 MotionManager* MotionManager::m_UniqueInstance = new MotionManager();
 
@@ -28,7 +32,7 @@ MotionManager::MotionManager() :
 	for(int i = 0; i < JointData::NUMBER_OF_JOINTS; i++)
 		m_Offset[i] = 0;
 
-    	clock_gettime(CLOCK_MONOTONIC,&start_time);
+	clock_gettime(CLOCK_MONOTONIC,&start_time);
 }
 
 MotionManager::~MotionManager()
@@ -112,6 +116,97 @@ bool MotionManager::Reinitialize()
 	return true;
 }
 
+/*
+void * MotionManager::ServerListener(void *param)
+{
+	LinuxServer server ( "128.208.4.38", MPC_PORT );
+	server.set_non_blocking(true);
+
+	try
+	{
+		while(data_sock.valid() == false)
+		{
+			cout << "[Waiting..]" << endl;            
+			server.accept(data_sock); // tcp_nodelay, but a blocking port
+			//data_sock.set_non_blocking(true);
+			cout << "[Accepted..]" << endl;
+			m_IsStreaming = true;
+		}
+	}
+	catch ( LinuxSocketException& e)
+	{
+		cout << "Exception was caught:" << e.description() << "\nExiting.\n";
+	}
+
+	pthread_exit(NULL);
+}
+*/
+
+
+void MotionManager::StartStreaming()
+{
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+
+	m_streamBuffer.clear();
+	m_streamBuffer.reserve(SEND_BUF_SIZE);
+
+	LinuxServer server ( "128.208.4.38", MPC_PORT );
+	//server.set_non_blocking(true);
+
+	try
+	{
+		while(data_sock.valid() == false)
+		{
+			cout << "[Waiting..]" << endl;            
+			server.accept(data_sock); // tcp_nodelay, but a blocking port
+			data_sock.set_non_blocking(true);
+			cout << "[Accepted..]" << endl;
+			m_IsStreaming = true;
+		}
+	}
+	catch ( LinuxSocketException& e)
+	{
+		cout << "Exception was caught:" << e.description() << "\nExiting.\n";
+	}
+
+	server.close();
+
+	//start a thread to async listen to connections
+
+	//int error = 0;
+	//if((error = pthread_create(&this->network_Thread, &attr, this->ServerListener, NULL))!= 0)
+	//{
+	//	printf("Couldn't Start Listener Socket...\n");
+	//	m_IsStreaming = false;
+	//}
+}
+
+void MotionManager::StopStreaming()
+{
+	//m_IsStreaming = false;
+	//if (data_sock.valid()) {
+	//	data_sock.close();
+	//}
+	//int error = 0;
+	//if((error = pthread_join(this->network_Thread, NULL))!= 0)
+	//{
+	//	printf("Problem Closing Listening socket thread...\n");
+	//}
+	//
+	cout << "Closing connection\n" << endl;
+
+	m_IsStreaming = false;
+	if (data_sock.valid()) {
+		data_sock.close();
+	}
+}
+
+bool MotionManager::IsStreaming()
+{
+	return m_IsStreaming;
+}
+
 void MotionManager::StartLogging()
 {
 	m_logBuffer.clear();
@@ -193,7 +288,7 @@ void MotionManager::StopLogging()
 		m_LogFileStream<<gyro2rads_ps(*it) << ","; it++;
 
 		m_LogFileStream<<-1*accel2ms2(*it) << ","; it++;
-		m_LogFileStream<<accel2ms2(*it) << ","; it++;
+		m_LogFileStream<<-1*accel2ms2(*it) << ","; it++;
 		m_LogFileStream<<-1*accel2ms2(*it) << ","; it++;
 
 		m_LogFileStream<<fsr2newton(*it) << ","; it++;
@@ -390,6 +485,79 @@ void MotionManager::Process()
 
 	m_CM730->BulkRead();
 
+	if(m_IsStreaming)
+	{
+		clock_gettime(CLOCK_MONOTONIC,&ms_time);
+
+		m_streamBuffer.push_back(sec_diff(start_time, ms_time)); 
+
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
+			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		}
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		}
+
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
+			m_streamBuffer.push_back(joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)));
+		}
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_streamBuffer.push_back(joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)));
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_streamBuffer.push_back(joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)));
+		} 
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
+			m_streamBuffer.push_back(j_rpm2rads_ps(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L)));
+		}
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_streamBuffer.push_back(j_rpm2rads_ps(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L)));
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_streamBuffer.push_back(j_rpm2rads_ps(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L)));
+		}
+
+		m_streamBuffer.push_back(-1*gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L)));
+		m_streamBuffer.push_back(-1*gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)));
+		m_streamBuffer.push_back(gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)));
+
+		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)));
+		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)));
+		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)));
+
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L)));
+
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L)));
+
+		if (data_sock.valid())
+		{
+			try {
+				//double *send_buf = &(m_streamBuffer[0]);
+				double *send_buf = m_streamBuffer.data();
+				if ( !data_sock.send((unsigned char*)send_buf, SEND_BUF_SIZE*sizeof(double)))
+				{
+					throw LinuxSocketException ( "Could not write to socket." );
+				}
+			}
+			catch ( LinuxSocketException& )
+			{
+				cout << "[Disconnected]" << endl;
+				StopStreaming();
+			}
+		}
+		m_streamBuffer.clear();
+		m_streamBuffer.reserve(SEND_BUF_SIZE);
+	}
+
 	if(m_IsLogging)
 	{
 		clock_gettime(CLOCK_MONOTONIC,&ms_time);
@@ -407,7 +575,7 @@ void MotionManager::Process()
 		for(int id = 19; id <= 20; id++) { // Head Joints
 			m_logBuffer.push_back(MotionStatus::m_CurrentJoints.GetValue(id));
 		}
-		
+
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 		}
@@ -437,7 +605,7 @@ void MotionManager::Process()
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
- 
+
 		//m_LogFileStream<<accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)) << ",";
 		//m_LogFileStream<<accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)) << ",";
 		//m_LogFileStream<<accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)) << ",";

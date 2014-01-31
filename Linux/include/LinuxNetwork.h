@@ -55,6 +55,7 @@ namespace Robot
 			bool selectWrite(int tmout) const;
 
 			bool is_valid() const { return m_sock != -1; }
+			void close();
 	};
 
 	class LinuxSocketException 
@@ -84,6 +85,9 @@ namespace Robot
 			void accept ( LinuxServer& );
 			bool send ( unsigned char *data, int length );
 			int recv ( unsigned char *data, int length );
+
+			bool valid() { return LinuxSocket::is_valid(); }
+			void close();
 	};
 }
 

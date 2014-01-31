@@ -13,7 +13,7 @@ TARGET_LOG = sys_id_log
 
 CXX = g++
 INCLUDE_DIRS = -I../../include -I../../../Framework/include
-CXXFLAGS +=	-O3 -DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
+CXXFLAGS +=	-DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
 LIBS += -lpthread -lrt
 
 #all: darwin.a $(TARGET) $(TARGET2) $(TARGET_LOG)

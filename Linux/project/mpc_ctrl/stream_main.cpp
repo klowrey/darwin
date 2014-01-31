@@ -20,7 +20,7 @@ using namespace Robot;
 using namespace std;
 
 const int RECV_BUF_SIZE = 21; // time + position
-const int SEND_BUF_SIZE = 47;
+const int SEND_BUF_SIZE = 55; // 1+20+20+3+3+4+4
 
 /*
 	1  ID_R_SHOULDER_PITCH     = 1,

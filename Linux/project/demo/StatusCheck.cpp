@@ -58,8 +58,11 @@ void StatusCheck::Check(CM730 &cm730)
 			LinuxActionScript::m_stop = 1;
 
 			Walking::GetInstance()->Stop();
-			if (MotionManager::GetInstance()->IsLogging() == true) {
-				MotionManager::GetInstance()->StopLogging();
+			//if (MotionManager::GetInstance()->IsLogging() == true) {
+			//	MotionManager::GetInstance()->StopLogging();
+			//}
+			if (MotionManager::GetInstance()->IsStreaming() == true) {
+				MotionManager::GetInstance()->StopStreaming();
 			}
 			Action::GetInstance()->m_Joint.SetEnableBody(true, true);
 
@@ -124,7 +127,8 @@ void StatusCheck::Check(CM730 &cm730)
 					if(MotionManager::GetInstance()->GetCalibrationStatus() == 1)
 					{
 						LinuxActionScript::PlayMP3("../../../Data/mp3/Sensor calibration complete.mp3");
-						MotionManager::GetInstance()->StartLogging();
+						//MotionManager::GetInstance()->StartLogging();
+						MotionManager::GetInstance()->StartStreaming();
 						sleep(2);
 						break;
 					}

@@ -45,7 +45,6 @@ void LinuxMotionTimer::Start(void)
     int error;
     struct sched_param param;
     pthread_attr_t attr;
-
     pthread_attr_init(&attr);
 
     error = pthread_attr_setschedpolicy(&attr, SCHED_RR);

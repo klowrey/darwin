@@ -86,7 +86,14 @@ bool LinuxSocket::listen() const
 bool LinuxSocket::accept ( LinuxSocket& new_socket ) const
 {
 	int addr_length = sizeof ( m_addr );
-	new_socket.m_sock = ::accept ( m_sock, ( sockaddr * ) &m_addr, ( socklen_t * ) &addr_length );
+	if (non_blocking) {
+		if (selectRead(-1)) {
+			new_socket.m_sock = ::accept ( m_sock, ( sockaddr * ) &m_addr, ( socklen_t * ) &addr_length );
+		}
+	}
+	else {
+		new_socket.m_sock = ::accept ( m_sock, ( sockaddr * ) &m_addr, ( socklen_t * ) &addr_length );
+	}
 
 	if ( new_socket.m_sock <= 0 )
 		return false;
@@ -121,7 +128,6 @@ bool LinuxSocket::send ( void* data, int length ) const
 		char* buf = (char*)data;
 
 		while (ndone < length) {
-
 			if (selectWrite(-1)) {
 				int status = ::send(m_sock, (void*)(buf+ndone), length-ndone, MSG_NOSIGNAL);
 				if ( status == -1 ) {
@@ -299,6 +305,12 @@ void LinuxSocket::set_non_blocking(const bool b)
 	printf("Socket is %s\n", (non_blocking)?"Non-Blocking":"Blocking");
 }
 
+void LinuxSocket::close()
+{
+	::close(m_sock);
+	m_sock = -1;
+}
+
 // ----------------------------------------------------------------------
 
 LinuxServer::LinuxServer ( const char* hostname, int port )
@@ -378,4 +390,9 @@ int LinuxServer::recv ( unsigned char* data, int length )
 {
 	int ret = LinuxSocket::recv(data, length);
 	return ret;
+}
+
+void LinuxServer::close()
+{
+	LinuxSocket::close();	
 }
