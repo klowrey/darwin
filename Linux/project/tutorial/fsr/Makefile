@@ -18,7 +18,7 @@ LIBS += -lpthread -lrt -ljpeg
 OBJS =	main.o
 
 
-all: darwin.a $(TARGET) $(TARGET2) step stand walk
+all: darwin.a $(TARGET) $(TARGET2) step stand straight walk
 
 darwin.a:
 	make -C ../../../build
@@ -35,11 +35,14 @@ step: step_main.o ../../../lib/darwin.a
 stand: stand_main.o ../../../lib/darwin.a
 	$(CXX) -o stand stand_main.o ../../../lib/darwin.a -lpthread -lrt
 
+straight: straight_main.o ../../../lib/darwin.a
+	$(CXX) -o straight straight_main.o ../../../lib/darwin.a -lpthread -lrt
+
 walk: walk_main.o ../../../lib/darwin.a
 	$(CXX) -o walk walk_main.o ../../../lib/darwin.a -lpthread -lrt
 
 clean:
-	rm -f $(OBJS) file_main.o step_main.o $(TARGET) $(TARGET2) step stand walk
+	rm -f $(OBJS) file_main.o step_main.o $(TARGET) $(TARGET2) step stand straight walk
 
 libclean:
 	make -C ../../../build clean

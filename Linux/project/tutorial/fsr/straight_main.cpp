@@ -16,8 +16,6 @@ using namespace Robot;
 #define U2D_DEV_NAME        "/dev/ttyUSB0"
 
 
-bool running = false;
-
 void change_current_dir()
 {
 	char exepath[1024] = {0};
@@ -43,21 +41,14 @@ void* walk_thread(void* ptr)
 	while(1) {
 		int ch = _getch();
 		if(ch == 0x20) {
-			//if(Walking::GetInstance()->IsRunning() == true) {
 			if(MotionManager::GetInstance()->IsStreaming() == true) {
-				running = false;
-				Walking::GetInstance()->Stop();
 				MotionManager::GetInstance()->StopStreaming();
 			}
 			else {
 				MotionManager::GetInstance()->StartStreaming();
-				sleep(2);
-				Walking::GetInstance()->Start();
-				running = true;
 			}
 		}
 	}
-
 	return NULL;
 }
 
@@ -79,7 +70,7 @@ int main()
 	MotionManager::GetInstance()->LoadINISettings(ini);
 	Walking::GetInstance()->LoadINISettings(ini);
 
-	MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
+	//MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
 	MotionManager::GetInstance()->AddModule((MotionModule*)Walking::GetInstance());
 	LinuxMotionTimer *motion_timer = new LinuxMotionTimer(MotionManager::GetInstance());
 	motion_timer->Start();
@@ -92,7 +83,7 @@ int main()
 	for(int id=JointData::ID_R_SHOULDER_PITCH; id<JointData::NUMBER_OF_JOINTS; id++)
 	{
 		wStartPosition = MotionStatus::m_CurrentJoints.GetValue(id);
-		wGoalPosition = Walking::GetInstance()->m_Joint.GetValue(id);
+		wGoalPosition = 2047; //Walking::GetInstance()->m_Joint.GetValue(id);
 		if( wStartPosition > wGoalPosition )
 			wDistance = wStartPosition - wGoalPosition;
 		else
@@ -114,39 +105,37 @@ int main()
 	getchar();
 	printf("Press the SPACE key to start/stop walking.. \n\n");
 
-	Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
-	Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
-	MotionManager::GetInstance()->SetEnable(true);
+	//Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
+	//Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
+	//MotionManager::GetInstance()->SetEnable(true);
 
-	static const int MAX_FSR_VALUE = 254;
-
-	Walking::GetInstance()->LoadINISettings(ini);
-
+	//Walking::GetInstance()->LoadINISettings(ini);
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
 
-	double m_FBStep = 0;
-	double m_RLTurn = 0;
-	double d_step = 0.6;
-
 	while(1)
 	{
-		if (running == true) {
-			m_FBStep += d_step; 
-			if (m_FBStep > 10.0) {
-				d_step = -0.3;
-			}
-			if (m_FBStep < 0) {
-				m_FBStep = 0.0;
-				running = false;
-				Walking::GetInstance()->Stop();
-			}
-			printf("FB Step : %f\n", m_FBStep);
-			Walking::GetInstance()->X_MOVE_AMPLITUDE = m_FBStep;
-			Walking::GetInstance()->A_MOVE_AMPLITUDE = m_RLTurn;
-		}
+		//printf("\r");
 
-		usleep(250000);
+		sleep(5);
+
+		/* Read & print FSR value */
+		//        printf(" L1:%5d", cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L));
+		//        printf(" L2:%5d", cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L));
+		//        printf(" L3:%5d", cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L));
+		//        printf(" L4:%5d", cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L));
+
+		//printf(" LX:%3d", MAX_FSR_VALUE-left_fsr_x);
+
+		//        printf(" R1:%5d", cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L));
+		//        printf(" R2:%5d", cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L));
+		//        printf(" R3:%5d", cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L));
+		//        printf(" R4:%5d", cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L));
+
+		//printf(" RX:%3d", right_fsr_x);
+		//printf(" RY:%3d", right_fsr_y);
+
+
 	}
 
 	return 0;

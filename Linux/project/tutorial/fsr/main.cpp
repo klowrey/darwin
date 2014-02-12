@@ -43,14 +43,14 @@ void* walk_thread(void* ptr)
 	while(1) {
 		int ch = _getch();
 		if(ch == 0x20) {
-			//if(Walking::GetInstance()->IsRunning() == true) {
-			if(MotionManager::GetInstance()->IsLogging() == true) {
-				//Walking::GetInstance()->Stop();
+			if(Walking::GetInstance()->IsRunning() == true) {
+			//if(MotionManager::GetInstance()->IsLogging() == true) {
+				Walking::GetInstance()->Stop();
 				MotionManager::GetInstance()->StopLogging();
 			}
 			else {
 				MotionManager::GetInstance()->StartLogging();
-				//Walking::GetInstance()->Start();
+				Walking::GetInstance()->Start();
 			}
 		}
 	}
