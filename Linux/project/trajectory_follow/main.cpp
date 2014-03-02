@@ -1,10 +1,3 @@
-/*
- * main.cpp
- *
- *  Created on: 2011. 1. 4.
- *      Author: robotis
- */
-
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -57,13 +50,100 @@ void* log_thread(void* ptr)
 	return NULL;
 }
 
+void initial_pose(double* joints, CM730 * cm730) {
+	int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
+	int wGoalPosition, wStartPosition, wDistance;
+	int joint_num = 0;
+	int n = 0;
+	int id = 0;
+
+	for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
+		wStartPosition = MotionStatus::m_CurrentJoints.GetValue(joint);
+
+		joint_num++;
+		param[n++] = joint_num;
+		wGoalPosition = radian2joint(joints[joint]); // in joint space?
+		if( wStartPosition > wGoalPosition )
+			wDistance = wStartPosition - wGoalPosition;
+		else
+			wDistance = wGoalPosition - wStartPosition;
+		wDistance >>= 2;
+		if( wDistance < 8 )
+			wDistance = 8;
+		param[n++] = CM730::GetLowByte(wGoalPosition);
+		param[n++] = CM730::GetHighByte(wGoalPosition);
+		param[n++] = CM730::GetLowByte(wDistance);
+		param[n++] = CM730::GetHighByte(wDistance);
+
+		joint_num++;
+		param[n++] = joint_num;
+		wGoalPosition = radian2joint(joints[joint+9]); // in joint space?
+		if( wStartPosition > wGoalPosition )
+			wDistance = wStartPosition - wGoalPosition;
+		else
+			wDistance = wGoalPosition - wStartPosition;
+		wDistance >>= 2;
+		if( wDistance < 8 )
+			wDistance = 8;
+		param[n++] = CM730::GetLowByte(wGoalPosition);
+		param[n++] = CM730::GetHighByte(wGoalPosition);
+		param[n++] = CM730::GetLowByte(wDistance);
+		param[n++] = CM730::GetHighByte(wDistance);
+	}
+
+	id = JointData::ID_HEAD_PAN;
+	param[n++] = id;
+	wGoalPosition = radian2joint(joints[id]);
+	if( wStartPosition > wGoalPosition )
+		wDistance = wStartPosition - wGoalPosition;
+	else
+		wDistance = wGoalPosition - wStartPosition;
+	wDistance >>= 2;
+	if( wDistance < 8 )
+		wDistance = 8;
+	param[n++] = CM730::GetLowByte(wGoalPosition);
+	param[n++] = CM730::GetHighByte(wGoalPosition);
+	param[n++] = CM730::GetLowByte(wDistance);
+	param[n++] = CM730::GetHighByte(wDistance);
+	joint_num++;
+
+	id = JointData::ID_HEAD_TILT;
+	param[n++] = id;
+	wGoalPosition = radian2joint(joints[id]);
+	if( wStartPosition > wGoalPosition )
+		wDistance = wStartPosition - wGoalPosition;
+	else
+		wDistance = wGoalPosition - wStartPosition;
+	wDistance >>= 2;
+	if( wDistance < 8 )
+		wDistance = 8;
+	param[n++] = CM730::GetLowByte(wGoalPosition);
+	param[n++] = CM730::GetHighByte(wGoalPosition);
+	param[n++] = CM730::GetLowByte(wDistance);
+	param[n++] = CM730::GetHighByte(wDistance);
+	joint_num++;
+
+	cm730->SyncWrite(MX28::P_GOAL_POSITION_L, 5, JointData::NUMBER_OF_JOINTS - 1, param);	
+}
+
 
 int main(int argc, char* argv[])
 {
+	char* filename;
+	if (argc > 1){
+		filename = argv[1];
+	}
+	printf("Reading from file %s\n", filename);
+
 	double dt = 0.02;
 	if (argc > 2){
 		dt = atof(argv[2]);
 	}
+	printf("Timestep is set at %d\n", dt);
+
+	int STRIDE = 0;
+	int LINE_SIZE = 21;
+
 	static struct timespec start_time;
 	static struct timespec end_time;
 
@@ -85,41 +165,22 @@ int main(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////
 
 	int n = 0;
-	int param[JointData::NUMBER_OF_JOINTS * 5];
-	int wGoalPosition, wStartPosition, wDistance;
-
-	// Move to initial position
-	for(int id=JointData::ID_R_SHOULDER_PITCH; id<JointData::NUMBER_OF_JOINTS; id++)
-	{
-		wStartPosition = MotionStatus::m_CurrentJoints.GetValue(id);
-		wGoalPosition = 2048; //Walking::GetInstance()->m_Joint.GetValue(id);
-		if( wStartPosition > wGoalPosition )
-			wDistance = wStartPosition - wGoalPosition;
-		else
-			wDistance = wGoalPosition - wStartPosition;
-
-		wDistance >>= 2;
-		if( wDistance < 8 )
-			wDistance = 8;
-
-		param[n++] = id;
-		param[n++] = CM730::GetLowByte(wGoalPosition);
-		param[n++] = CM730::GetHighByte(wGoalPosition);
-		param[n++] = CM730::GetLowByte(wDistance);
-		param[n++] = CM730::GetHighByte(wDistance);
-	}
-	cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 5, JointData::NUMBER_OF_JOINTS - 1, param);	
+	//int param[JointData::NUMBER_OF_JOINTS * 5];
+	int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
 
 	printf("Press the ENTER key to begin!\n");
 	getchar();
 
-	Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
-	Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
-	MotionManager::GetInstance()->SetEnable(true);
+	//Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
+	//Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
+	//MotionManager::GetInstance()->SetEnable(true);
 
-	printf("Press the SPACE key to log!\n");
-	pthread_t thread_t;
-	pthread_create(&thread_t, NULL, log_thread, NULL);
+	//printf("Press the SPACE key to log!\n");
+	//pthread_t thread_t;
+	//pthread_create(&thread_t, NULL, log_thread, NULL);
+	
+	
+
 
 
 	double timestamp = 0.0;
@@ -136,14 +197,21 @@ int main(int argc, char* argv[])
 	unsigned long fileLen = ftell(trajectory_file);
 	fseek(trajectory_file, 0, SEEK_SET);
 
+	printf("%d %d\n", fileLen, fileLen % sizeof(double));
 	if (fileLen % sizeof(double)) {
 		printf("Mis-aligned data from trajectory file %s\n", filename);
-		close(trajectory_file);
+		fclose(trajectory_file);
 		return 0;
 	}
 
-	printf("%f Data samples from file sized %d\n", fileLen/sizeof(double), %d);
+	int samples = fileLen/sizeof(double)/LINE_SIZE;
+
+	printf("Grabbed %d data samples from file sized %lu bytes.\n", samples, fileLen);
+
 	double* binary_line = (double*) malloc(fileLen);
+	double* joint_data;
+	double* prev_joint;
+	double* interp = (double*) malloc(LINE_SIZE*sizeof(double));
 
 	fread((void*)binary_line, fileLen, 1, trajectory_file);
 	fclose(trajectory_file);
@@ -153,61 +221,114 @@ int main(int argc, char* argv[])
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
 
-	int STRIDE = 0;
+	prev_joint = &(binary_line[0]);
+	timestamp += dt;
+	STRIDE += LINE_SIZE;
+
+	// Move to initial position
+	initial_pose(prev_joint, &cm730);
+
+	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
+		cm730.WriteByte(joint, MX28::P_P_GAIN, 32, 0);
+		cm730.WriteByte(joint, MX28::P_D_GAIN, 0, 0);
+		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 0, 0);
+	}
+
+	printf("Press ENTER if happy with initial pose!\n");
+	getchar();
+
 	// there is still data in the buffer
-	if (timestamp == binary_line[STRIDE]) {
-		timestamp += dt;
+	for (int sample = 1; sample<samples; sample++) {
+		printf("%3.2f% through the file.\n", (double)sample/samples);
 
-		while ( time_passed < timestamp) {
-			printf("%f is < %f\n", time_passed, timestamp);
-			double radian = 0;
-			int joint_num = 0;
+		// might not need to bother checking this...
+		if ((timestamp - binary_line[sample*LINE_SIZE]) < 10e-6) {
 
-			// INTERPOLATION STEP
+			timestamp += dt;
 
-			// prepare commands to joints
-			for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
-				joint_num++;
-				param[n++] = joint_num;
-				value = radian2joint(binary_line[STRIDE+joint]); // in joint space?
+			joint_data = &(binary_line[STRIDE]);
+
+			// can print out 20 joint datas
+			printf("t: %1.3f; ", prev_joint[0]);
+			for (int joint=1; joint<20; joint++) {
+				printf("%1.3f ", prev_joint[joint]);
+			}
+			printf("\n");
+
+			printf("t: %1.3f; ", joint_data[0]);
+			for (int joint=1; joint<20; joint++) {
+				printf("%1.3f ", joint_data[joint]);
+			}
+			printf("\n");
+
+
+			while ( time_passed < timestamp) {
+				//printf("%f is < %f\n", time_passed, timestamp);
+				double radian = 0;
+				int joint_num = 0;
+				int value;
+				int id;
+				int n = 0;
+
+				clock_gettime(CLOCK_MONOTONIC, &end_time);
+				time_passed = sec_diff(start_time, end_time);
+
+				// INTERPOLATION STEP
+				double percent = 1.0 - ((joint_data[0]-prev_joint[0]) / (time_passed-prev_joint[0]));
+				//printf("%3.2f through interpolation.\n", percent);
+				for (int joint=1; joint<20; joint++) {
+					double diff = joint_data[joint] - prev_joint[joint];
+					interp[joint] = prev_joint[joint] + percent*diff;
+					//printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[joint], interp[joint], joint_data[joint]);
+				}
+
+				// prepare commands to joints
+				for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
+					joint_num++;
+					param[n++] = joint_num;
+					value = radian2joint(interp[joint]); // in joint space?
+					param[n++] = CM730::GetLowByte(value);
+					param[n++] = CM730::GetHighByte(value);
+
+					joint_num++;
+					param[n++] = joint_num;
+					value = radian2joint(interp[joint+9]); // in joint space?
+					param[n++] = CM730::GetLowByte(value);
+					param[n++] = CM730::GetHighByte(value);
+				}
+
+				id = JointData::ID_HEAD_PAN;
+				param[n++] = id;
+				value = radian2joint(interp[id]);
 				param[n++] = CM730::GetLowByte(value);
 				param[n++] = CM730::GetHighByte(value);
-
 				joint_num++;
-				param[n++] = joint_num;
-				value = radian2joint(binary_line[STRIDE+joint+9]); // in joint space?
+
+				id = JointData::ID_HEAD_TILT;
+				param[n++] = id;
+				value = radian2joint(interp[id]);
 				param[n++] = CM730::GetLowByte(value);
 				param[n++] = CM730::GetHighByte(value);
+				joint_num++;
+
+				if(joint_num > 0) {
+					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
+				}
 			}
 
-			id = JointData::ID_HEAD_PAN;
-			param[n++] = id;
-			value = radian2joint(binary_line[STRIDE+id]);
-			param[n++] = CM730::GetLowByte(value);
-			param[n++] = CM730::GetHighByte(value);
-			joint_num++;
-
-			id = JointData::ID_HEAD_TILT;
-			param[n++] = id;
-			value = radian2joint(binary_line[STRIDE+id]);
-			param[n++] = CM730::GetLowByte(value);
-			param[n++] = CM730::GetHighByte(value);
-			joint_num++;
-
-			printf("\nParsed %d joint positions.\n", joint_num);
-
-			clock_gettime(CLOCK_MONOTONIC, &end_time);
-			time_passed = sec_diff(start_time, end_time);
+			STRIDE += LINE_SIZE;
+			prev_joint = joint_data;
 		}
+		else {
 
-		STRIDE += DATA_SIZE;
-	}
-	else {
-
-		printf("bad timestamp!");
-		break;
+			printf("\nbad timestamp!\n");
+			break;
+		}
 	}
 
+
+	free(binary_line);
+	free(interp);
 
 	return 0;
 }

@@ -50,7 +50,7 @@ void* walk_thread(void* ptr)
 				MotionManager::GetInstance()->StopStreaming();
 			}
 			else {
-				MotionManager::GetInstance()->StartStreaming();
+				//MotionManager::GetInstance()->StartStreaming();
 				sleep(2);
 				Walking::GetInstance()->Start();
 				running = true;

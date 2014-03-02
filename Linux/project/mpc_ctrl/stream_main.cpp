@@ -329,7 +329,6 @@ int main(int argc, char* argv[])
 
 						// prepare commands to joints
 						for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
-
 							joint_num++;
 							param[n++] = joint_num;
 							value = radian2joint(ctrl[joint]); // in joint space?

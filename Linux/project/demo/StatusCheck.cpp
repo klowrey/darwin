@@ -128,7 +128,7 @@ void StatusCheck::Check(CM730 &cm730)
 					{
 						LinuxActionScript::PlayMP3("../../../Data/mp3/Sensor calibration complete.mp3");
 						//MotionManager::GetInstance()->StartLogging();
-						MotionManager::GetInstance()->StartStreaming();
+						//MotionManager::GetInstance()->StartStreaming();
 						sleep(2);
 						break;
 					}
