@@ -12,7 +12,7 @@ TARGET = follower
 INCLUDE_DIRS = -I../../include -I../../../Framework/include
 
 CXX = g++
-CXXFLAGS += -O2 -DLINUX -Wall $(INCLUDE_DIRS)
+CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
 #CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
 LFLAGS += -lpthread -ljpeg -lrt
 

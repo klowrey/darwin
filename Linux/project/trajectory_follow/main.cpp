@@ -14,118 +14,99 @@
 using namespace Robot;
 
 
-void change_current_dir()
-{
-	char exepath[1024] = {0};
-	if(readlink("/proc/self/exe", exepath, sizeof(exepath)) != -1)
-		chdir(dirname(exepath));
-}
-
-int _getch()
-{
-	struct termios oldt, newt;
-	int ch;
-	tcgetattr( STDIN_FILENO, &oldt );
-	newt = oldt;
-	newt.c_lflag &= ~(ICANON | ECHO);
-	tcsetattr( STDIN_FILENO, TCSANOW, &newt );
-	ch = getchar();
-	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
-	return ch;
-}
-
-void* log_thread(void* ptr)
-{
-	while(1) {
-		int ch = _getch();
-		if(ch == 0x20) {
-			if(MotionManager::GetInstance()->IsLogging() == true) {
-				MotionManager::GetInstance()->StopLogging();
-			}
-			else {
-				MotionManager::GetInstance()->StartLogging();
-			}
-		}
-	}
-	return NULL;
-}
-
 void initial_pose(double* joints, CM730 * cm730) {
 	int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
 	int wGoalPosition, wStartPosition, wDistance;
 	int joint_num = 0;
 	int n = 0;
 	int id = 0;
+	int min_speed = 50;
 
-	for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
-		wStartPosition = MotionStatus::m_CurrentJoints.GetValue(joint);
 
-		joint_num++;
-		param[n++] = joint_num;
-		wGoalPosition = radian2joint(joints[joint]); // in joint space?
+	if (cm730->BulkRead() == CM730::SUCCESS) {
+
+		//for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
+		//	//cm730->WriteWord(joint, MX28::P_MOVING_SPEED_L, 2, 0);
+		//	cm730->WriteByte(joint, MX28::P_MOVING_SPEED_L, CM730::GetLowByte(8), 0);
+		//	cm730->WriteByte(joint, MX28::P_MOVING_SPEED_H, CM730::GetHighByte(8), 0);
+		//}
+
+		for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
+			wStartPosition = MotionStatus::m_CurrentJoints.GetValue(joint);
+
+			joint_num++;
+			param[n++] = joint_num;
+			wGoalPosition = radian2joint(joints[joint]); // in joint space?
+
+			if( wStartPosition > wGoalPosition )
+				wDistance = wStartPosition - wGoalPosition;
+			else
+				wDistance = wGoalPosition - wStartPosition;
+			wDistance >>= 2;
+			if( wDistance < min_speed )
+				wDistance = min_speed;
+
+			printf("%d\n", wDistance);
+			param[n++] = CM730::GetLowByte(wGoalPosition);
+			param[n++] = CM730::GetHighByte(wGoalPosition);
+			param[n++] = CM730::GetLowByte(wDistance);
+			param[n++] = CM730::GetHighByte(wDistance);
+
+			joint_num++;
+			param[n++] = joint_num;
+			wGoalPosition = radian2joint(joints[joint+9]); // in joint space?
+			if( wStartPosition > wGoalPosition )
+				wDistance = wStartPosition - wGoalPosition;
+			else
+				wDistance = wGoalPosition - wStartPosition;
+			wDistance >>= 2;
+			if( wDistance < min_speed )
+				wDistance = min_speed;
+			param[n++] = CM730::GetLowByte(wGoalPosition);
+			param[n++] = CM730::GetHighByte(wGoalPosition);
+			param[n++] = CM730::GetLowByte(wDistance);
+			param[n++] = CM730::GetHighByte(wDistance);
+		}
+
+		id = JointData::ID_HEAD_PAN;
+		param[n++] = id;
+		wGoalPosition = radian2joint(joints[id]);
 		if( wStartPosition > wGoalPosition )
 			wDistance = wStartPosition - wGoalPosition;
 		else
 			wDistance = wGoalPosition - wStartPosition;
 		wDistance >>= 2;
-		if( wDistance < 8 )
-			wDistance = 8;
+		if( wDistance < min_speed )
+			wDistance = min_speed;
 		param[n++] = CM730::GetLowByte(wGoalPosition);
 		param[n++] = CM730::GetHighByte(wGoalPosition);
 		param[n++] = CM730::GetLowByte(wDistance);
 		param[n++] = CM730::GetHighByte(wDistance);
-
 		joint_num++;
-		param[n++] = joint_num;
-		wGoalPosition = radian2joint(joints[joint+9]); // in joint space?
+
+		id = JointData::ID_HEAD_TILT;
+		param[n++] = id;
+		wGoalPosition = radian2joint(joints[id]);
 		if( wStartPosition > wGoalPosition )
 			wDistance = wStartPosition - wGoalPosition;
 		else
 			wDistance = wGoalPosition - wStartPosition;
 		wDistance >>= 2;
-		if( wDistance < 8 )
-			wDistance = 8;
+		if( wDistance < min_speed )
+			wDistance = min_speed;
 		param[n++] = CM730::GetLowByte(wGoalPosition);
 		param[n++] = CM730::GetHighByte(wGoalPosition);
 		param[n++] = CM730::GetLowByte(wDistance);
 		param[n++] = CM730::GetHighByte(wDistance);
+		joint_num++;
+
+		cm730->SyncWrite(MX28::P_GOAL_POSITION_L, 5, JointData::NUMBER_OF_JOINTS - 1, param);	
 	}
+	else {
+		printf("Couldn't read from ROBOT!!\n");
 
-	id = JointData::ID_HEAD_PAN;
-	param[n++] = id;
-	wGoalPosition = radian2joint(joints[id]);
-	if( wStartPosition > wGoalPosition )
-		wDistance = wStartPosition - wGoalPosition;
-	else
-		wDistance = wGoalPosition - wStartPosition;
-	wDistance >>= 2;
-	if( wDistance < 8 )
-		wDistance = 8;
-	param[n++] = CM730::GetLowByte(wGoalPosition);
-	param[n++] = CM730::GetHighByte(wGoalPosition);
-	param[n++] = CM730::GetLowByte(wDistance);
-	param[n++] = CM730::GetHighByte(wDistance);
-	joint_num++;
-
-	id = JointData::ID_HEAD_TILT;
-	param[n++] = id;
-	wGoalPosition = radian2joint(joints[id]);
-	if( wStartPosition > wGoalPosition )
-		wDistance = wStartPosition - wGoalPosition;
-	else
-		wDistance = wGoalPosition - wStartPosition;
-	wDistance >>= 2;
-	if( wDistance < 8 )
-		wDistance = 8;
-	param[n++] = CM730::GetLowByte(wGoalPosition);
-	param[n++] = CM730::GetHighByte(wGoalPosition);
-	param[n++] = CM730::GetLowByte(wDistance);
-	param[n++] = CM730::GetHighByte(wDistance);
-	joint_num++;
-
-	cm730->SyncWrite(MX28::P_GOAL_POSITION_L, 5, JointData::NUMBER_OF_JOINTS - 1, param);	
+	}
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -139,13 +120,14 @@ int main(int argc, char* argv[])
 	if (argc > 2){
 		dt = atof(argv[2]);
 	}
-	printf("Timestep is set at %d\n", dt);
+	printf("Timestep is set at %f\n", dt);
 
 	int STRIDE = 0;
 	int LINE_SIZE = 21;
 
 	static struct timespec start_time;
 	static struct timespec end_time;
+	static struct timespec final_time;
 
 	printf( "\n===== Trajectory following Tutorial for DARwIn =====\n\n");
 
@@ -157,6 +139,7 @@ int main(int argc, char* argv[])
 		printf("Fail to initialize Motion Manager!\n");
 		return 0;
 	}
+	cm730.MakeBulkReadPacketMPC();
 
 	//MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
 	//MotionManager::GetInstance()->AddModule((MotionModule*)Walking::GetInstance());
@@ -177,10 +160,6 @@ int main(int argc, char* argv[])
 
 	//printf("Press the SPACE key to log!\n");
 	//pthread_t thread_t;
-	//pthread_create(&thread_t, NULL, log_thread, NULL);
-	
-	
-
 
 
 	double timestamp = 0.0;
@@ -218,8 +197,6 @@ int main(int argc, char* argv[])
 	// file stuff done
 
 	double time_passed = 0;
-	clock_gettime(CLOCK_MONOTONIC, &start_time);
-	clock_gettime(CLOCK_MONOTONIC, &end_time);
 
 	prev_joint = &(binary_line[0]);
 	timestamp += dt;
@@ -228,18 +205,28 @@ int main(int argc, char* argv[])
 	// Move to initial position
 	initial_pose(prev_joint, &cm730);
 
+	printf("t: %1.3f; ", prev_joint[0]);
+	for (int joint=1; joint<20; joint++) {
+		printf("%1.3f ", prev_joint[joint]);
+	}
+	printf("\n");
+
+
+	printf("Press ENTER if happy with initial pose!\n");
+	getchar();
+
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteByte(joint, MX28::P_P_GAIN, 32, 0);
 		cm730.WriteByte(joint, MX28::P_D_GAIN, 0, 0);
 		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 0, 0);
 	}
 
-	printf("Press ENTER if happy with initial pose!\n");
-	getchar();
+	clock_gettime(CLOCK_MONOTONIC, &start_time);
+	clock_gettime(CLOCK_MONOTONIC, &end_time);
 
 	// there is still data in the buffer
 	for (int sample = 1; sample<samples; sample++) {
-		printf("%3.2f% through the file.\n", (double)sample/samples);
+		printf("%3.2f percent through the file.\n", (double)sample/samples);
 
 		// might not need to bother checking this...
 		if ((timestamp - binary_line[sample*LINE_SIZE]) < 10e-6) {
@@ -262,8 +249,9 @@ int main(int argc, char* argv[])
 			printf("\n");
 
 
+			printf("%f ??? %f\n", time_passed, timestamp);
 			while ( time_passed < timestamp) {
-				//printf("%f is < %f\n", time_passed, timestamp);
+				printf("%f is < %f\n", time_passed, timestamp);
 				double radian = 0;
 				int joint_num = 0;
 				int value;
@@ -314,6 +302,8 @@ int main(int argc, char* argv[])
 				if(joint_num > 0) {
 					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 				}
+
+				//if (cm730.BulkRead() == CM730::SUCCESS) { }
 			}
 
 			STRIDE += LINE_SIZE;
@@ -326,6 +316,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	clock_gettime(CLOCK_MONOTONIC, &final_time);
+	printf("Trajectory took %f seconds\n", sec_diff(start_time, final_time));
 
 	free(binary_line);
 	free(interp);
