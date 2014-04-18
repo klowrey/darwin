@@ -22,7 +22,6 @@ void initial_pose(double* joints, CM730 * cm730) {
 	int id = 0;
 	int min_speed = 50;
 
-
 	if (cm730->BulkRead() == CM730::SUCCESS) {
 
 		//for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
@@ -46,7 +45,7 @@ void initial_pose(double* joints, CM730 * cm730) {
 			if( wDistance < min_speed )
 				wDistance = min_speed;
 
-			printf("%d\n", wDistance);
+			//printf("%d\n", wDistance);
 			param[n++] = CM730::GetLowByte(wGoalPosition);
 			param[n++] = CM730::GetHighByte(wGoalPosition);
 			param[n++] = CM730::GetLowByte(wDistance);
@@ -110,17 +109,33 @@ void initial_pose(double* joints, CM730 * cm730) {
 
 int main(int argc, char* argv[])
 {
+
+	printf("Usage: ./follower [0-1 engage] [filename] [timestep] [p_gain]\n");
+
+	int engage = 0;
+	if (argc > 1) {
+		engage = atoi(argv[1]);	
+	}
+	printf("Engaging joints: %s\n", engage ? "true":"false");
+
 	char* filename;
-	if (argc > 1){
-		filename = argv[1];
+	if (argc > 2){
+		filename = argv[2];
 	}
 	printf("Reading from file %s\n", filename);
 
 	double dt = 0.02;
-	if (argc > 2){
-		dt = atof(argv[2]);
+	if (argc > 3){
+		dt = atof(argv[3]);
 	}
 	printf("Timestep is set at %f\n", dt);
+
+	int p_gain = 20;
+	if (argc > 4){
+		p_gain = atoi(argv[4]);
+	}
+	printf("P Gain is set at %d\n", p_gain);
+
 
 	int STRIDE = 0;
 	int LINE_SIZE = 21;
@@ -210,13 +225,13 @@ int main(int argc, char* argv[])
 		printf("%1.3f ", prev_joint[joint]);
 	}
 	printf("\n");
-
+	printf("Timestep from file: %f\n", binary_line[LINE_SIZE] - binary_line[0]);
 
 	printf("Press ENTER if happy with initial pose!\n");
 	getchar();
 
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
-		cm730.WriteByte(joint, MX28::P_P_GAIN, 32, 0);
+		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
 		cm730.WriteByte(joint, MX28::P_D_GAIN, 0, 0);
 		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 0, 0);
 	}
@@ -299,19 +314,19 @@ int main(int argc, char* argv[])
 				param[n++] = CM730::GetHighByte(value);
 				joint_num++;
 
-				if(joint_num > 0) {
+
+				if(joint_num > 0 && engage) {
 					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 				}
 
-				//if (cm730.BulkRead() == CM730::SUCCESS) { }
+				if (cm730.BulkRead() == CM730::SUCCESS) { }
 			}
 
 			STRIDE += LINE_SIZE;
 			prev_joint = joint_data;
 		}
 		else {
-
-			printf("\nbad timestamp!\n");
+			printf("\nbad timestamp! %f and %f\n", timestamp, binary_line[sample*LINE_SIZE]);
 			break;
 		}
 	}

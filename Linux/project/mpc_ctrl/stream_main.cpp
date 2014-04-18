@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 	printf("P: %d, D: %d\n", p_gain, d_gain);
 
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
-		cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 0, 0);
+		cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 1, 0);
 		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
 		cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
 	}
