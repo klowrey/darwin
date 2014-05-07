@@ -152,6 +152,7 @@ int main(int argc, char* argv[])
 	//static struct timespec begin_time;
 	//static struct timespec end_time;
 	static struct timespec read_time;
+	static struct timespec print_time;
 	//static struct timespec write_time;
 	vector<double> r_time;
 	vector<double> w_time;
@@ -164,12 +165,12 @@ int main(int argc, char* argv[])
 	double* p_buf;
 
 	double* ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
+
 #ifdef VERBOSE
 	double* raw_buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
 	double* raw_ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
 #endif
 
-	clock_gettime(TEST_CLOCK, &start_time);
 
 	try
 	{
@@ -182,6 +183,8 @@ int main(int argc, char* argv[])
 
 			try
 			{
+				clock_gettime(TEST_CLOCK, &start_time);
+				clock_gettime(TEST_CLOCK, &print_time);
 				while (true) {
 					if (cm730.BulkRead() == CM730::SUCCESS) {
 
@@ -304,6 +307,10 @@ int main(int argc, char* argv[])
 #ifdef VERBOSE
 						print_send_buf(buf);
 #endif
+						if (sec_diff(print_time, read_time) > 1.0) {
+							print_send_buf(buf);
+							clock_gettime(TEST_CLOCK, &print_time);
+						}
 
 						if ( !data_sock.send((unsigned char*)buf, SEND_BUF_SIZE*sizeof(double)))
 						{
@@ -312,12 +319,12 @@ int main(int argc, char* argv[])
 
 						memset((void*) ctrl, 0, RECV_BUF_SIZE*sizeof(double));
 
-						if ( !data_sock.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double)))
-						{
-							// bug in the MPC-side code not killing the thread
-							// properly
-							throw LinuxSocketException ( "Could not read from socket." );
-						}
+						//if ( !data_sock.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double)))
+						//{
+						//	// bug in the MPC-side code not killing the thread
+						//	// properly
+						//	throw LinuxSocketException ( "Could not read from socket." );
+						//}
 
 #ifdef VERBOSE
 						printf("ctrl ");
@@ -394,8 +401,8 @@ int main(int argc, char* argv[])
 				cout << "[Disconnected]" << endl;
 
 				for (int joint=1; joint<JointData::NUMBER_OF_JOINTS; joint++) {
-					// go slack
-					cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 0, 0);
+					// don't go slack
+					//cm730.WriteWord(joint, MX28::P_TORQUE_ENABLE, 0, 0);
 				}
 			}
 		}

@@ -107,6 +107,13 @@ int main()
 
 	//Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
 	Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
+	Walking::GetInstance()->m_Joint.SetAngle(JointData::ID_HEAD_TILT, 0);
+	Walking::GetInstance()->m_Joint.SetAngle(JointData::ID_HEAD_PAN, 0);
+
+	for(int id=JointData::ID_R_SHOULDER_PITCH; id<JointData::NUMBER_OF_JOINTS; id++)
+	{
+		Walking::GetInstance()->m_Joint.SetPGain(id, 50);
+	}
 	MotionManager::GetInstance()->SetEnable(true);
 
 	static const int MAX_FSR_VALUE = 254;

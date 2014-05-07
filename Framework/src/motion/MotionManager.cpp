@@ -12,7 +12,7 @@
 #include "MX28.h"
 #include "MotionManager.h"
 
-#define SEND_BUF_SIZE 75 
+#define SEND_BUF_SIZE 55 
 #define MPC_PORT 13131
 
 using namespace Robot;
@@ -491,15 +491,15 @@ void MotionManager::Process()
 
 		m_streamBuffer.push_back(sec_diff(start_time, ms_time)); 
 
-		for(int id = 1; id <= 17; id+=2) { // Right Joints
-			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
-		}
-		for(int id = 2; id <= 18; id+=2) { // Left Joints
-			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
-		}
-		for(int id = 19; id <= 20; id++) { // Head Joints
-			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
-		}
+		//for(int id = 1; id <= 17; id+=2) { // Right Joints
+		//	m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		//}
+		//for(int id = 2; id <= 18; id+=2) { // Left Joints
+		//	m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		//}
+		//for(int id = 19; id <= 20; id++) { // Head Joints
+		//	m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		//}
 
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_streamBuffer.push_back(joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)));
@@ -524,9 +524,9 @@ void MotionManager::Process()
 		m_streamBuffer.push_back(-1*gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)));
 		m_streamBuffer.push_back(gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)));
 
-		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)));
+		m_streamBuffer.push_back(accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)));
 		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)));
-		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)));
+		m_streamBuffer.push_back(accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)));
 
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L)));
