@@ -6,15 +6,17 @@
 
 inline double sec_diff(timespec start, timespec end)
 {
-	timespec temp;
-	if ((end.tv_nsec-start.tv_nsec)<0) {
-		temp.tv_sec = end.tv_sec-start.tv_sec-1;
-		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
-	} else {
-		temp.tv_sec = end.tv_sec-start.tv_sec;
-		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
-	}
-	return (double)(temp.tv_sec+temp.tv_nsec/1000000000.0);
+	long long temp = (end.tv_sec*1000000000 + end.tv_nsec) -
+		(start.tv_sec*1000000000 + start.tv_nsec);
+
+	//if ((end.tv_nsec-start.tv_nsec)<0) {
+	//	temp.tv_sec = end.tv_sec-start.tv_sec-1;
+	//	temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+	//} else {
+	//	temp.tv_sec = end.tv_sec-start.tv_sec;
+	//	temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+	//}
+	return (double)(temp/1000000000.0);
 }
 
 // joint positions for converting to and from
