@@ -12,7 +12,7 @@
 #include "MX28.h"
 #include "MotionManager.h"
 
-#define SEND_BUF_SIZE 55 
+#define SEND_BUF_SIZE 75 
 #define MPC_PORT 13131
 
 using namespace Robot;
@@ -145,8 +145,8 @@ void * MotionManager::ServerListener(void *param)
 
 void MotionManager::StartStreaming()
 {
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
+	//pthread_attr_t attr;
+	//pthread_attr_init(&attr);
 
 	m_streamBuffer.clear();
 	m_streamBuffer.reserve(SEND_BUF_SIZE);
@@ -491,15 +491,15 @@ void MotionManager::Process()
 
 		m_streamBuffer.push_back(sec_diff(start_time, ms_time)); 
 
-		//for(int id = 1; id <= 17; id+=2) { // Right Joints
-		//	m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
-		//}
-		//for(int id = 2; id <= 18; id+=2) { // Left Joints
-		//	m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
-		//}
-		//for(int id = 19; id <= 20; id++) { // Head Joints
-		//	m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
-		//}
+		for(int id = 1; id <= 17; id+=2) { // Right Joints
+			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		}
+		for(int id = 2; id <= 18; id+=2) { // Left Joints
+			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		}
+		for(int id = 19; id <= 20; id++) { // Head Joints
+			m_streamBuffer.push_back(joint2radian(MotionStatus::m_CurrentJoints.GetValue(id)));
+		}
 
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_streamBuffer.push_back(joint2radian(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L)));
@@ -528,15 +528,15 @@ void MotionManager::Process()
 		m_streamBuffer.push_back(-1*accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)));
 		m_streamBuffer.push_back(accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)));
 
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L)));
-		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L)));
 
-		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L)));
+		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)));
 
 		if (data_sock.valid())
 		{
@@ -561,9 +561,7 @@ void MotionManager::Process()
 	if(m_IsLogging)
 	{
 		clock_gettime(CLOCK_MONOTONIC,&ms_time);
-		//m_LogFileStream << sec_diff(start_time, ms_time) << ",";
 
-		// TODO not hack shit
 		m_logBuffer.push_back((int)(sec_diff(start_time, ms_time)*1000)); 
 
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
@@ -596,36 +594,19 @@ void MotionManager::Process()
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 		}
 
-		//m_LogFileStream << MotionStatus::m_CurrentJoints.GetPGain(id) << ",";
-		//m_LogFileStream << MotionStatus::m_CurrentJoints.GetDGain(id) << ",";
-
-		//m_LogFileStream<<gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)) << ",";
-		//m_LogFileStream<<gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)) << ",";
-		//m_LogFileStream<<gyro2rads_ps(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L)) << ",";
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
 
-		//m_LogFileStream<<accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)) << ",";
-		//m_LogFileStream<<accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)) << ",";
-		//m_LogFileStream<<accel2ms2(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)) << ",";
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
 
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L)) << ",";
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L)) << ",";
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L)) << ",";
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L)) << ",";
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR3_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR4_L));
 
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)) << ",";
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L)) << ",";
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L)) << ",";
-		//m_LogFileStream<<fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L));
@@ -640,7 +621,6 @@ void MotionManager::Process()
 		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_L_FSR].ReadByte(FSR::P_FSR_Y) << ",";
 		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadByte(FSR::P_FSR_X) << ",";
 		//m_LogFileStream << m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadByte(FSR::P_FSR_Y) << ",";
-
 		//m_LogFileStream << std::endl;
 	}
 
@@ -676,3 +656,4 @@ void MotionManager::SetJointDisable(int index)
 			(*i)->m_Joint.SetEnable(index, false);
 	}
 }
+

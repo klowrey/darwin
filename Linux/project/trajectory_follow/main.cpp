@@ -13,6 +13,33 @@
 
 using namespace Robot;
 
+int _getch()
+{
+	struct termios oldt, newt;
+	int ch;
+	tcgetattr( STDIN_FILENO, &oldt );
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+	ch = getchar();
+	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+	return ch;
+}
+
+volatile bool ready = false;
+
+void* walk_thread(void* ptr)
+{
+	while(1) {
+		int ch = _getch();
+		if(ch == 0x20) {
+			ready = true;
+			printf("READY!\n");
+			break;
+		}
+	}
+	return NULL;
+}
 
 void initial_pose(double* joints, CM730 * cm730) {
 	int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
@@ -236,9 +263,22 @@ int main(int argc, char* argv[])
 		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 0, 0);
 	}
 
+	if (MotionManager::GetInstance()->IsStreaming() == false) {
+		MotionManager::GetInstance()->StartStreaming();
+	}
+
+	printf("Streaming Started. Press SPACE to play trajectory\n");
+
+	pthread_t thread_t;
+	pthread_create(&thread_t, NULL, walk_thread, NULL);
+	while (!ready)
+	{
+		MotionManager::GetInstance()->Process();
+	}
+	pthread_join(thread_t, NULL);
+
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
-
 	// there is still data in the buffer
 	for (int sample = 1; sample<samples; sample++) {
 		printf("%3.2f percent through the file.\n", (double)sample/samples);
@@ -319,7 +359,9 @@ int main(int argc, char* argv[])
 					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 				}
 
-				if (cm730.BulkRead() == CM730::SUCCESS) { }
+		//		if (cm730.BulkRead() == CM730::SUCCESS) { }
+				MotionManager::GetInstance()->Process();
+				// add streaming capability to mpc_studio
 			}
 
 			STRIDE += LINE_SIZE;
@@ -333,6 +375,10 @@ int main(int argc, char* argv[])
 
 	clock_gettime(CLOCK_MONOTONIC, &final_time);
 	printf("Trajectory took %f seconds\n", sec_diff(start_time, final_time));
+
+	if (MotionManager::GetInstance()->IsStreaming() == false) {
+		MotionManager::GetInstance()->StopStreaming();
+	}
 
 	free(binary_line);
 	free(interp);

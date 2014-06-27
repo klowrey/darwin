@@ -35,8 +35,8 @@ step: step_main.o ../../../lib/darwin.a
 stand: stand_main.o ../../../lib/darwin.a
 	$(CXX) -o stand stand_main.o ../../../lib/darwin.a -lpthread -lrt
 
-slack: stand_main.o ../../../lib/darwin.a
-	$(CXX) -o slack stand_main.o ../../../lib/darwin.a -lpthread -lrt
+slack: slack_main.o ../../../lib/darwin.a
+	$(CXX) -o slack slack_main.o ../../../lib/darwin.a -lpthread -lrt
 
 straight: straight_main.o ../../../lib/darwin.a
 	$(CXX) -o straight straight_main.o ../../../lib/darwin.a -lpthread -lrt

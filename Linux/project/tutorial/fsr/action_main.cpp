@@ -20,6 +20,8 @@ using namespace Robot;
 #define a_STANDUP 1
 #define a_SITDOWN 15
 #define a_WALKRDY 9
+#define a_LIEDOWN 90
+#define a_LIEUP 91
 
 
 void change_current_dir()
@@ -42,22 +44,6 @@ int _getch()
 	return ch;
 }
 
-void* walk_thread(void* ptr)
-{
-	while(1) {
-		int ch = _getch();
-		if(ch == 0x20) {
-			if(MotionManager::GetInstance()->IsStreaming() == true) {
-				MotionManager::GetInstance()->StopStreaming();
-			}
-			else {
-				MotionManager::GetInstance()->StartStreaming();
-			}
-		}
-	}
-	return NULL;
-}
-
 void sighandler(int sig)
 {
 	exit(0);
@@ -65,6 +51,7 @@ void sighandler(int sig)
 
 void do_action(int act) {
 
+	Action::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
 	Action::GetInstance()->Start(act);
 	while(Action::GetInstance()->IsRunning() == 1) usleep(4000);
 
@@ -105,7 +92,6 @@ int main()
 
 	printf("Press the ENTER key to begin!\n");
 	getchar();
-	printf("Press the SPACE key to start streaming data.. \n\n");
 
 	//Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
 	//Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
@@ -117,12 +103,6 @@ int main()
 	//	Walking::GetInstance()->m_Joint.SetPGain(id, 50);
 	//}
 	//MotionManager::GetInstance()->SetEnable(true);
-
-	static const int MAX_FSR_VALUE = 254;
-
-	//Walking::GetInstance()->LoadINISettings(ini);
-	//pthread_t thread_t;
-	//pthread_create(&thread_t, NULL, walk_thread, NULL);
 
 
 	Action::GetInstance()->LoadFile((char*)MOTION_FILE_PATH);
@@ -140,11 +120,12 @@ int main()
 	bool crouched = false;
 	bool walking = false;
 	bool running = true;
+	bool slack = false;
 
 	while(running)
 	{
 		// detect and act on falls
-		if(MotionStatus::FALLEN != STANDUP)
+		if(!slack && MotionStatus::FALLEN != STANDUP)
 		{
 			if (walking) {
 				Walking::GetInstance()->Stop();
@@ -167,8 +148,11 @@ int main()
 
 		// if not streaming, wait for connection
 		if (MotionManager::GetInstance()->IsStreaming() == false) {
+			printf("\nNot connected...\n");
 			MotionManager::GetInstance()->StartStreaming();
 		}
+
+		printf("\nAccepting actions: \n");
 
 		// respond to user input
 		int ch = _getch();
@@ -181,14 +165,22 @@ int main()
 
 			case 'c':
 				if (crouched) {
-					printf("Crouching\n");
-					do_action(a_STANDUP);
+					printf("Standing\n");
+					do_action(a_WALKRDY);
 					crouched = false;
 				}
 				else {
-					printf("Standing\n");
+					printf("Crouching\n");
 					do_action(a_SITDOWN);
 					crouched = true;
+				}
+				break;
+
+			case 'H':
+				// go slack
+				slack = !slack;
+				for(int id=JointData::ID_R_SHOULDER_PITCH; id<JointData::NUMBER_OF_JOINTS; id++) {
+					Walking::GetInstance()->m_Joint.SetEnable(id, !slack);
 				}
 				break;
 
@@ -202,6 +194,19 @@ int main()
 
 			case 's':
 				// walking stuff
+				if (walking == false) {
+					do_action(a_WALKRDY);
+					walking = true;
+				}
+				printf("Taking 1 Step in place\n");
+
+				Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
+				Walking::GetInstance()->TakeSteps(1);
+
+				while(Walking::GetInstance()->IsRunning() == 1) usleep(4000);
+				Walking::GetInstance()->m_Joint.SetEnableBody(false, false);
+
+				printf("Step taken\n");
 				break;
 
 			case 'd':

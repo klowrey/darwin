@@ -75,6 +75,9 @@ Walking::Walking()
 	m_Joint.SetPGain(JointData::ID_L_SHOULDER_ROLL, 8);
 	m_Joint.SetPGain(JointData::ID_R_ELBOW, 8);
 	m_Joint.SetPGain(JointData::ID_L_ELBOW, 8);
+
+	m_Num_Steps = -1;
+	m_Steps_Taken = 0;
 }
 
 Walking::~Walking()
@@ -343,6 +346,21 @@ void Walking::Start()
 	m_Real_Running = true;
 }
 
+void Walking::TakeSteps(int steps)
+{
+	if (steps < 0) {
+		m_Num_Steps = -1;
+		printf("Must give Positive Number of Steps\n");
+	}
+	else {
+		printf("Prepping to take %d steps\n", steps);
+		m_Ctrl_Running = true;
+		m_Real_Running = true;
+		m_Num_Steps = steps;
+		m_Steps_Taken = 0;
+	}
+}
+
 void Walking::Stop()
 {
 	m_Ctrl_Running = false;
@@ -366,6 +384,16 @@ void Walking::Process()
 	int dir[14]          = {   -1,        -1,          1,         1,         -1,            1,          -1,        -1,         -1,         -1,         1,            1,           1,           -1      };
 	double initAngle[14] = {   0.0,       0.0,        0.0,       0.0,        0.0,          0.0,         0.0,       0.0,        0.0,        0.0,       0.0,          0.0,       -48.345,       41.313    };
 	int outValue[14];
+
+	// Counting number of steps taken
+	if (m_Num_Steps > 0 
+			&& (m_Steps_Taken >= m_Num_Steps))
+	{
+		// reset values, and stop running
+		m_Num_Steps = -1;
+		m_Steps_Taken = 0;
+		m_Ctrl_Running = false;
+	}
 
 	// Update walk parameters
 	if(m_Time == 0)
@@ -538,7 +566,10 @@ void Walking::Process()
 	{
 		m_Time += TIME_UNIT;
 		if(m_Time >= m_PeriodTime)
+		{
+			m_Steps_Taken++;
 			m_Time = 0;
+		}
 	}
 
 	// Compute angles

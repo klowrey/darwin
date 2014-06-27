@@ -89,6 +89,9 @@ namespace Robot
 		bool m_Real_Running;
 		double m_Time;
 
+		int m_Num_Steps;
+		int m_Steps_Taken;
+
 		int    m_Phase;
 		double m_Body_Swing_Y;
 		double m_Body_Swing_Z;
@@ -146,6 +149,7 @@ namespace Robot
 
 		void Initialize();
 		void Start();
+		void TakeSteps(int steps);
 		void Stop();
 		void Process();
 		bool IsRunning();

@@ -41,15 +41,19 @@ void* walk_thread(void* ptr)
 	while(1) {
 		int ch = _getch();
 		if(ch == 0x20) {
-			//if(Walking::GetInstance()->IsRunning() == true) {
-			if(MotionManager::GetInstance()->IsStreaming() == true) {
+			if(Walking::GetInstance()->IsRunning() == true) {
+				//if(MotionManager::GetInstance()->IsStreaming() == true) 
 				Walking::GetInstance()->Stop();
-				MotionManager::GetInstance()->StopStreaming();
+				//MotionManager::GetInstance()->StopStreaming();
 			}
 			else {
-				MotionManager::GetInstance()->StartStreaming();
+				//MotionManager::GetInstance()->StartStreaming();
+				if(MotionManager::GetInstance()->IsStreaming() == false) {
+					MotionManager::GetInstance()->StartStreaming();
+				}
 				Walking::GetInstance()->Start();
 			}
+
 		}
 	}
 	return NULL;
@@ -114,6 +118,10 @@ int main()
 
 	static const int MAX_FSR_VALUE = 254;
 
+	if(MotionManager::GetInstance()->IsStreaming() == false) {
+		MotionManager::GetInstance()->StartStreaming();
+	}
+
 	Walking::GetInstance()->LoadINISettings(ini);
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
@@ -121,7 +129,6 @@ int main()
 	while(1)
 	{
 		//printf("\r");
-
 		sleep(5);
 
 		/* Read & print FSR value */
