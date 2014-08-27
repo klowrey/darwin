@@ -1,0 +1,19 @@
+using lib_robotis to read data from dynamixels
+
+
+python lib_robotis.py -d /dev/ttyUSB0 --scan
+
+# should get back all servov IDs
+
+
+
+
+TODO
+making trajectories
+testing trajectories in playback on matlab?
+
+what is Y in the sysid code
+Q, C, V, Y, U, T
+
+
+
