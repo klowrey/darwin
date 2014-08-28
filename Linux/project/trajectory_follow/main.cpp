@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+
 #include <libgen.h>
 #include <pthread.h>
 #include <termios.h>
@@ -21,6 +22,7 @@ int _getch()
 	newt = oldt;
 	newt.c_lflag &= ~(ICANON | ECHO);
 	tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+
 	ch = getchar();
 	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
 	return ch;
@@ -137,6 +139,7 @@ void initial_pose(double* joints, CM730 * cm730) {
 int main(int argc, char* argv[])
 {
 
+	printf("I did nothing til now. \n\n");
 	printf("Usage: ./follower [0-1 engage] [filename] [timestep] [p_gain]\n");
 
 	int engage = 0;
@@ -263,20 +266,25 @@ int main(int argc, char* argv[])
 		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 0, 0);
 	}
 
-	if (MotionManager::GetInstance()->IsStreaming() == false) {
-		MotionManager::GetInstance()->StartStreaming();
-	}
+//if (MotionManager::GetInstance()->IsStreaming() == false) {
+//		MotionManager::GetInstance()->StartStreaming();
+//	}
 
 	printf("Streaming Started. Press SPACE to play trajectory\n");
 
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
+
+
+
 	while (!ready)
 	{
 		MotionManager::GetInstance()->Process();
 	}
 	pthread_join(thread_t, NULL);
 
+
+	
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
 	// there is still data in the buffer
@@ -306,7 +314,7 @@ int main(int argc, char* argv[])
 
 			printf("%f ??? %f\n", time_passed, timestamp);
 			while ( time_passed < timestamp) {
-				printf("%f is < %f\n", time_passed, timestamp);
+				//printf("%f is < %f\n", time_passed, timestamp);
 				double radian = 0;
 				int joint_num = 0;
 				int value;
@@ -315,10 +323,10 @@ int main(int argc, char* argv[])
 
 				clock_gettime(CLOCK_MONOTONIC, &end_time);
 				time_passed = sec_diff(start_time, end_time);
+				//printf("s: %f e: %f\n", timespec2sec(start_time), timespec2sec(end_time));
 
 				// INTERPOLATION STEP
 				double percent = 1.0 - ((joint_data[0]-prev_joint[0]) / (time_passed-prev_joint[0]));
-				//printf("%3.2f through interpolation.\n", percent);
 				for (int joint=1; joint<20; joint++) {
 					double diff = joint_data[joint] - prev_joint[joint];
 					interp[joint] = prev_joint[joint] + percent*diff;
@@ -359,7 +367,8 @@ int main(int argc, char* argv[])
 					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 				}
 
-		//		if (cm730.BulkRead() == CM730::SUCCESS) { }
+				if (cm730.BulkRead() == CM730::SUCCESS) { }
+
 				MotionManager::GetInstance()->Process();
 				// add streaming capability to mpc_studio
 			}

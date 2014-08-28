@@ -4,7 +4,8 @@ import numpy, scipy.io
 import time
 
 
-### elbow joint limit range='-1.57 1.3'
+### r_elbow joint limit range='-1.57 1.3'
+### l_elbow joint limit range='-1.3 1.57'
 
 s_ = time.time()
 
@@ -50,7 +51,8 @@ p.print_summary()
 #f.write("ctrl,qpos,qvel,load,volt,temp\n") # header
 
 #traj = open(input_file, 'r')
-input_file = '60_sec.csv'
+#input_file = '60_sec.csv'
+input_file = 'traj_left.csv'
 traj = (numpy.loadtxt(open(input_file, 'r'), delimiter=",", skiprows=0)).T
 
 #print traj[0]
@@ -82,9 +84,9 @@ for t, c in zip(traj[0,1:], traj[1,1:]):
 #while (time.time() - s_) < 0.2:
 
     t_ = time.time() - s_
+    print t_, c
     p.move_angle(c)
 
-    #print t_
     # sleep if not caught up?
     while t_ < t:
         #print t, c
@@ -116,7 +118,7 @@ s_ = time.time()
 #numpy.savetxt(output_file, a, delimiter=",", header="ctrl,qpos,qvel,load,volt,temp")
 
 # to .mat file
-scipy.io.savemat(output_file, \
+scipy.io.savemat(output_file, oned_as='row', \
         mdict={'Q':qpos[1:],'C':ctrl[1:],'V':qvel[1:],'Y':qvel[0:],'T':tm__[1:]})
 # still need Y, U, and T
 

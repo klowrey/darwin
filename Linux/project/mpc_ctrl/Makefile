@@ -8,13 +8,14 @@
 ###############################################################
 
 TARGET = streamer
-TARGET2 = joints
+#TARGET2 = joints
 TARGET_LOG = sys_id_log 
 
 CXX = g++
 INCLUDE_DIRS = -I../../include -I../../../Framework/include
 CXXFLAGS +=	-DLINUX -g -Wall -fmessage-length=0 $(INCLUDE_DIRS)
 LIBS += -lpthread -lrt
+
 
 #all: darwin.a $(TARGET) $(TARGET2) $(TARGET_LOG)
 all: darwin.a $(TARGET) $(TARGET2)

@@ -285,11 +285,11 @@ void MotionManager::StopLogging()
 
 		m_LogFileStream<<-1*gyro2rads_ps(*it) << ","; it++; 
 		m_LogFileStream<<-1*gyro2rads_ps(*it) << ","; it++;
-		m_LogFileStream<<gyro2rads_ps(*it) << ","; it++;
+		m_LogFileStream<<   gyro2rads_ps(*it) << ","; it++;
 
+		m_LogFileStream<<   accel2ms2(*it) << ","; it++;
 		m_LogFileStream<<-1*accel2ms2(*it) << ","; it++;
-		m_LogFileStream<<-1*accel2ms2(*it) << ","; it++;
-		m_LogFileStream<<-1*accel2ms2(*it) << ","; it++;
+		m_LogFileStream<<   accel2ms2(*it) << ","; it++;
 
 		m_LogFileStream<<fsr2newton(*it) << ","; it++;
 		m_LogFileStream<<fsr2newton(*it) << ","; it++;

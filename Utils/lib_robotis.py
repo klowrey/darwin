@@ -92,6 +92,60 @@ class USB2Dynamixel_Device():
             raise RuntimeError('lib_robotis: Serial port not found!\n')
 
 
+class CM730():
+    ''' Class that manages serial port contention between servos on same bus
+    '''
+    def __init__( self, dev_name = '/dev/ttyUSB0', baudrate = 1000000 ):
+        try:
+            self.dev_name = string.atoi( dev_name ) # stores the serial port as 0-based integer for Windows
+        except:
+            self.dev_name = dev_name # stores it as a /dev-mapped string for Linux / Mac
+
+        self.mutex = thread.allocate_lock()
+        self.servo_dev = None
+
+        self.acq_mutex()
+        self._open_serial( baudrate )
+        self.rel_mutex()
+
+    def acq_mutex(self):
+        self.mutex.acquire()
+
+    def rel_mutex(self):
+        self.mutex.release()
+
+    def send_serial(self, msg):
+        # It is up to the caller to acquire / release mutex
+        self.servo_dev.write( msg )
+
+    def read_serial(self, nBytes=1):
+        # It is up to the caller to acquire / release mutex
+        rep = self.servo_dev.read( nBytes )
+        return rep
+
+    def close_serial(self):
+        self.acq_mutex()
+        self.servo_dev.close()
+        self.rel_mutex()
+
+    def _open_serial(self, baudrate):
+        try:
+            self.servo_dev = serial.Serial(self.dev_name, baudrate, timeout=1.0)
+            # Closing the device first seems to prevent "Access Denied" errors on WinXP
+            # (Conversations with Brian Wu @ MIT on 6/23/2010)
+            self.servo_dev.close()
+            self.servo_dev.setParity('N')
+            self.servo_dev.setStopbits(1)
+            self.servo_dev.open()
+
+            self.servo_dev.flushOutput()
+            self.servo_dev.flushInput()
+
+        except (serial.serialutil.SerialException), e:
+            raise RuntimeError('lib_robotis: Serial port not found!\n')
+        if(self.servo_dev == None):
+            raise RuntimeError('lib_robotis: Serial port not found!\n')
+
 
 
 
@@ -281,7 +335,8 @@ class Robotis_Servo():
             print 'lib_robotis.ignoring move command.'
             return
 
-        self.set_angvel(angvel)
+        if angvel != None:
+            self.set_angvel(angvel)
 
         if self.settings['flipped']:
             ang = ang * -1.0

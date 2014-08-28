@@ -15,6 +15,7 @@
 #include <iostream>
 
 #define MPC_PORT 13131
+#define SERVER_IP "128.208.4.39"
 
 using namespace Robot;
 using namespace std;
@@ -103,7 +104,7 @@ void print_send_buf(double* buf)
 		printf("%1.2f ", buf[i]);
 	}
 	printf("\nsnsrs : ");
-	for (int i=41; i<47; i++) {
+	for (int i=41; i<55; i++) {
 		printf("%1.2f ", buf[i]);
 	}
 	printf("\n");
@@ -112,18 +113,23 @@ void print_send_buf(double* buf)
 
 int main(int argc, char* argv[])
 {
-	printf( "\n===== Stream 2 MPC Tutorial for DARwIn =====\n\n");
+	printf( "\n===== Yifan Hou modified this code to be a client. =====\n");
+	printf( "\n===== Original file backup could be find alongside this file. =====\n\n");
 
 	//////////////////// Framework Initialize ////////////////////////////
 	LinuxCM730 linux_cm730("/dev/ttyUSB0");
 	CM730 cm730(&linux_cm730);
 
-	if(cm730.Connect() == false)
+	// if(cm730.Connect() == false)
+	// {
+	// 	printf("Failure to connect CM-730!\n");
+	// 	return 0;
+	// }
+	if(MotionManager::GetInstance()->Initialize(&cm730) == false)
 	{
-		printf("Failure to connect CM-730!\n");
+		printf("Fail to initialize Motion Manager!\n");
 		return 0;
 	}
-
 	cm730.MakeBulkReadPacketMPC();
 
 	/////////////////////////////////////////////////////////////////////
@@ -157,29 +163,39 @@ int main(int argc, char* argv[])
 	vector<double> r_time;
 	vector<double> w_time;
 	clockid_t TEST_CLOCK = CLOCK_MONOTONIC;
-
-	LinuxServer data_sock;
-	LinuxServer server ( "128.208.4.38", MPC_PORT );
-
+        
+    printf("here0\n");
+	// LinuxServer data_sock;
+	LinuxSocket client;
+	client.create();
+	if (client.connect(SERVER_IP, MPC_PORT ))
+	{
+		printf("Successfully connected to the server at %s, Port %d\n", SERVER_IP, MPC_PORT);
+	}
+	else
+	{
+		printf("Unable to connect to the server. Bye.\n");
+		exit(1);
+	};
 	double* buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
 	double* p_buf;
 
 	double* ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
+	
 
 #ifdef VERBOSE
 	double* raw_buf = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
 	double* raw_ctrl = (double*) malloc(RECV_BUF_SIZE * sizeof(double));
 #endif
 
-
 	try
 	{
 		while(true)
 		{
-			cout << "[Waiting..]" << endl;            
-			server.accept(data_sock); // tcp_nodelay, but a blocking port
-			//data_sock.set_non_blocking(true);
-			cout << "[Accepted..]" << endl;
+			cout << "Preparing data..." << endl;            
+			// server.accept(data_sock); // tcp_nodelay, but a blocking port
+			// //data_sock.set_non_blocking(true);
+			// cout << "[Accepted..]" << endl;
 
 			try
 			{
@@ -192,6 +208,7 @@ int main(int argc, char* argv[])
 						//int param[(JointData::NUMBER_OF_JOINTS-2) * MX28::PARAM_BYTES];
 
 						clock_gettime(TEST_CLOCK, &read_time);
+						//write the time used for read sensors
 						buf[0] = sec_diff(start_time, read_time);
 						p_buf = buf+1;
 						int index = 1;
@@ -205,6 +222,7 @@ int main(int argc, char* argv[])
 
 
 						// prepare data for sending to mpc
+						// joint angle and velocity
 						for (int joint=1; joint<=JointData::ID_R_ANKLE_ROLL; joint++) {
 							// right joints
 							value = cm730.m_BulkReadData[joint].ReadWord(MX28::P_PRESENT_POSITION_L);
@@ -282,6 +300,7 @@ int main(int argc, char* argv[])
 						index+=3;
 
 						// FSR Feet, Right and Left
+						//47
 						*p_buf = fsr2newton(cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L));
 						p_buf++;
 						*p_buf = fsr2newton(cm730.m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L));
@@ -292,6 +311,7 @@ int main(int argc, char* argv[])
 						p_buf++;
 						index+=4;
 
+						//51
 						*p_buf = fsr2newton(cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR1_L));
 						p_buf++;
 						*p_buf = fsr2newton(cm730.m_BulkReadData[FSR::ID_L_FSR].ReadWord(FSR::P_FSR2_L));
@@ -304,35 +324,55 @@ int main(int argc, char* argv[])
 
 
 						///////// Verify Output
-#ifdef VERBOSE
+// #ifdef VERBOSE
+						printf("Data to be sent(start from next line):\n");
 						print_send_buf(buf);
-#endif
+						printf("###That's all.\n");
+// #endif
 						if (sec_diff(print_time, read_time) > 1.0) {
 							print_send_buf(buf);
 							clock_gettime(TEST_CLOCK, &print_time);
 						}
 
-						if ( !data_sock.send((unsigned char*)buf, SEND_BUF_SIZE*sizeof(double)))
-						{
-							throw LinuxSocketException ( "Could not write to socket." );
-						}
+						// double* buf2 = (double*) malloc(SEND_BUF_SIZE * sizeof(double));
+						
+						// while(1)
+						// {
 
+							if ( !client.send((unsigned char*)buf, SEND_BUF_SIZE*sizeof(double)))
+							{
+								throw LinuxSocketException ( "Could not write to socket." );
+							}
+							printf("Successfully send data.\n");
+							// printf("Press ENTER to send again, 'q' to continue\n");
+							// if (getchar() == 'q')
+								// break;
+
+						// }
 						memset((void*) ctrl, 0, RECV_BUF_SIZE*sizeof(double));
 
-						//if ( !data_sock.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double)))
-						//{
-						//	// bug in the MPC-side code not killing the thread
-						//	// properly
-						//	throw LinuxSocketException ( "Could not read from socket." );
-						//}
+						printf("\n###############  Done Sending ###################.\n");
+						// printf("Press ENTER to receive.\n");
+						// getchar();
 
-#ifdef VERBOSE
+						if ( !client.recv((unsigned char*)ctrl, RECV_BUF_SIZE*sizeof(double)))
+						{
+							// bug in the MPC-side code not killing the thread
+							// properly
+							throw LinuxSocketException ( "Could not read from socket." );
+						}
+
+// #ifdef VERBOSE
+						printf("TimeUsed: %1.2f ms.\n",ctrl[0]);
 						printf("ctrl ");
 						for (int joint=1; joint<=20; joint++) {
-							printf("%1.1f ", ctrl[joint]);
+							printf("%1.2f ", ctrl[joint]);
 						}
 						printf("\n");
-#endif
+// #endif
+						printf("\n###############  Done Receiving ###################.\n");
+						// printf("Press ENTER to actuate\n");
+						// getchar();
 
 						// prepare commands to joints
 						for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
@@ -382,12 +422,16 @@ int main(int argc, char* argv[])
 							printf("%d %f %f\n", joint, raw_buf[joint], raw_ctrl[joint]);
 						}
 #endif
-
+						int ctt=0;
 						if(joint_num > 0) {
 							//cm730.SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
+							printf("%d\n", ctt++);
+							cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 
-							//cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
 						}
+
+						// printf("###################### Done! ####################\n");
+						// exit(0);
 					}
 					else {
 						printf("Couldn't read data!\n");

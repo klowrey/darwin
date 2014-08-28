@@ -16,9 +16,9 @@ CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
 #CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
 LFLAGS += -lpthread -ljpeg -lrt
 
-OBJECTS =   main.o
+OBJECTS =   main.o 
 
-all: $(TARGET)
+all: $(TARGET) logger
 
 clean:
 	rm -f *.a *.o $(TARGET) core *~ *.so *.lo
@@ -34,6 +34,10 @@ darwin.a:
 $(TARGET): darwin.a $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) ../../lib/darwin.a -o $(TARGET) $(LFLAGS)
 	chmod 755 $(TARGET)
+
+logger: darwin.a save_main.o 
+	$(CXX) $(CFLAGS) save_main.o ../../lib/darwin.a -o logger $(LFLAGS)
+	chmod 755 logger 
 
 # useful to make a backup "make tgz"
 tgz: clean
