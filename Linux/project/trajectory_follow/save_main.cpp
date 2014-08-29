@@ -7,6 +7,10 @@
 #include <termios.h>
 #include <term.h>
 
+#include "MotionManager.h"
+#include "MotionModule.h"
+#include "JointData.h"
+#include "MX28.h"
 #include "LinuxDARwIn.h"
 #include "MPCData.h"
 
@@ -201,7 +205,6 @@ int main(int argc, char* argv[])
 
 	//Head::GetInstance()->m_Joint.SetEnableHeadOnly(true, true);
 	//Walking::GetInstance()->m_Joint.SetEnableBodyWithoutHead(true, true);
-	//MotionManager::GetInstance()->SetEnable(true);
 
 	//printf("Press the SPACE key to log!\n");
 	//pthread_t thread_t;
@@ -282,7 +285,11 @@ int main(int argc, char* argv[])
 	if (MotionManager::GetInstance()->IsLogging() == false) {
 		MotionManager::GetInstance()->StartLogging();
 	}
-	
+
+	if (engage) {
+		MotionManager::GetInstance()->SetEnable(true);
+	}
+
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
 	// there is still data in the buffer
@@ -292,7 +299,6 @@ int main(int argc, char* argv[])
 		// might not need to bother checking this...
 		if ((timestamp - binary_line[sample*LINE_SIZE]) < 10e-6) {
 
-			timestamp += dt;
 
 			joint_data = &(binary_line[STRIDE]);
 
@@ -319,12 +325,15 @@ int main(int argc, char* argv[])
 				int id;
 				int n = 0;
 
+				//double percent = 1.0 - ((joint_data[0]-prev_joint[0]) / (time_passed-prev_joint[0]));
+				double percent = ((time_passed-prev_joint[0]) / (joint_data[0]-prev_joint[0]));
+				printf("percent: %f, %f %f\n", percent, joint_data[0], prev_joint[0]);
+
 				clock_gettime(CLOCK_MONOTONIC, &end_time);
 				time_passed = sec_diff(start_time, end_time);
 				//printf("s: %f e: %f\n", timespec2sec(start_time), timespec2sec(end_time));
 
 				// INTERPOLATION STEP
-				double percent = 1.0 - ((joint_data[0]-prev_joint[0]) / (time_passed-prev_joint[0]));
 				for (int joint=1; joint<20; joint++) {
 					double diff = joint_data[joint] - prev_joint[joint];
 					interp[joint] = prev_joint[joint] + percent*diff;
@@ -334,38 +343,27 @@ int main(int argc, char* argv[])
 				// prepare commands to joints
 				for (int joint=1; joint<=JointData::ID_R_HIP_ROLL; joint++) {
 					joint_num++;
-					param[n++] = joint_num;
-					value = radian2joint(interp[joint]); // in joint space?
-					param[n++] = CM730::GetLowByte(value);
-					param[n++] = CM730::GetHighByte(value);
+					MotionStatus::m_CurrentJoints.SetValue(joint_num, radian2joint(interp[joint]));
+					MotionStatus::m_CurrentJoints.SetEnable(joint_num, true);
 
 					joint_num++;
-					param[n++] = joint_num;
-					value = radian2joint(interp[joint+9]); // in joint space?
-					param[n++] = CM730::GetLowByte(value);
-					param[n++] = CM730::GetHighByte(value);
+					MotionStatus::m_CurrentJoints.SetValue(joint_num, radian2joint(interp[joint+9]));
+					MotionStatus::m_CurrentJoints.SetEnable(joint_num, true);
 				}
 
 				id = JointData::ID_HEAD_PAN;
-				param[n++] = id;
-				value = radian2joint(interp[id]);
-				param[n++] = CM730::GetLowByte(value);
-				param[n++] = CM730::GetHighByte(value);
+				MotionStatus::m_CurrentJoints.SetValue(id, radian2joint(interp[id]));
+				MotionStatus::m_CurrentJoints.SetEnable(id, true);
 				joint_num++;
 
 				id = JointData::ID_HEAD_TILT;
-				param[n++] = id;
-				value = radian2joint(interp[id]);
-				param[n++] = CM730::GetLowByte(value);
-				param[n++] = CM730::GetHighByte(value);
+				MotionStatus::m_CurrentJoints.SetValue(id, radian2joint(interp[id]));
+				MotionStatus::m_CurrentJoints.SetEnable(id, true);
 				joint_num++;
 
-
-				if(joint_num > 0 && engage) {
-					cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
-				}
-
-				if (cm730.BulkRead() == CM730::SUCCESS) { }
+				//if(joint_num > 0 && engage) {
+				//cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
+				//}
 
 				MotionManager::GetInstance()->Process(); // does the logging
 				// add streaming capability to mpc_studio
@@ -373,6 +371,8 @@ int main(int argc, char* argv[])
 
 			STRIDE += LINE_SIZE;
 			prev_joint = joint_data;
+
+			timestamp += dt;
 		}
 		else {
 			printf("\nbad timestamp! %f and %f\n", timestamp, binary_line[sample*LINE_SIZE]);
