@@ -468,7 +468,7 @@ void MotionManager::Process()
 				param[n++] = MotionStatus::m_CurrentJoints.GetDGain(id);
 				param[n++] = MotionStatus::m_CurrentJoints.GetIGain(id);
 				param[n++] = MotionStatus::m_CurrentJoints.GetPGain(id);
-				param[n++] = 0;
+				param[n++] = 0; // moving speed ??
 				param[n++] = CM730::GetLowByte(MotionStatus::m_CurrentJoints.GetValue(id) + m_Offset[id]);
 				param[n++] = CM730::GetHighByte(MotionStatus::m_CurrentJoints.GetValue(id) + m_Offset[id]);
 				joint_num++;

@@ -140,6 +140,19 @@ void initial_pose(double* joints, CM730 * cm730) {
 	}
 }
 
+void print_status(CM730 * cm730) {
+	printf("Joint Info:\n");
+	int out;
+	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
+		cm730->ReadByte(joint, MX28::P_P_GAIN, &out, 0);
+		printf("P: %d ", out);
+		cm730->ReadByte(joint, MX28::P_D_GAIN, &out, 0);
+		printf("D: %d ", out);
+		cm730->ReadWord(joint, MX28::P_MOVING_SPEED_L, &out, 0);
+		printf("Speed: %3.1f %% max speed\n", 100.0*out/1024.0);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -263,17 +276,28 @@ int main(int argc, char* argv[])
 	printf("Press ENTER if happy with initial pose!\n");
 	getchar();
 
+	// TODO fix this sequence of stuff
+	if (engage) {
+		MotionManager::GetInstance()->SetEnable(true);
+	}
+  
+	int d_gain = 0;
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
-		cm730.WriteByte(joint, MX28::P_D_GAIN, 0, 0);
-		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 0, 0);
+		cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
+		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 256, 0);
+
+		MotionStatus::m_CurrentJoints.SetPGain(joint, p_gain);
+		MotionStatus::m_CurrentJoints.SetIGain(joint, 0);
+		MotionStatus::m_CurrentJoints.SetDGain(joint, d_gain);
 	}
+
+	print_status(&cm730);
 
 	printf("Streaming Started. Press SPACE to play trajectory\n");
 
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
-
 
 	while (!ready)
 	{
@@ -281,17 +305,13 @@ int main(int argc, char* argv[])
 	}
 	pthread_join(thread_t, NULL);
 
-
 	if (MotionManager::GetInstance()->IsLogging() == false) {
 		MotionManager::GetInstance()->StartLogging();
 	}
 
-	if (engage) {
-		MotionManager::GetInstance()->SetEnable(true);
-	}
-
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
+
 	// there is still data in the buffer
 	for (int sample = 1; sample<samples; sample++) {
 		printf("%3.2f percent through the file.\n", (double)sample/samples);
@@ -366,8 +386,9 @@ int main(int argc, char* argv[])
 				//}
 
 				MotionManager::GetInstance()->Process(); // does the logging
-				// add streaming capability to mpc_studio
 			}
+
+	//print_status(&cm730);
 
 			STRIDE += LINE_SIZE;
 			prev_joint = joint_data;
@@ -391,6 +412,8 @@ int main(int argc, char* argv[])
 
 	free(binary_line);
 	free(interp);
+
+	print_status(&cm730);
 
 	return 0;
 }
