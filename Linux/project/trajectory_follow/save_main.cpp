@@ -84,6 +84,9 @@ void initial_pose(double* joints, CM730 * cm730) {
 			param[n++] = CM730::GetLowByte(wDistance);
 			param[n++] = CM730::GetHighByte(wDistance);
 
+			MotionStatus::m_CurrentJoints.SetValue(joint_num, wGoalPosition);
+			MotionStatus::m_CurrentJoints.SetEnable(id, true);
+
 			joint_num++;
 			param[n++] = joint_num;
 			wGoalPosition = radian2joint(joints[joint+9]); // in joint space?
@@ -98,6 +101,9 @@ void initial_pose(double* joints, CM730 * cm730) {
 			param[n++] = CM730::GetHighByte(wGoalPosition);
 			param[n++] = CM730::GetLowByte(wDistance);
 			param[n++] = CM730::GetHighByte(wDistance);
+
+			MotionStatus::m_CurrentJoints.SetValue(joint_num, wGoalPosition);
+			MotionStatus::m_CurrentJoints.SetEnable(id, true);
 		}
 
 		id = JointData::ID_HEAD_PAN;
@@ -114,6 +120,8 @@ void initial_pose(double* joints, CM730 * cm730) {
 		param[n++] = CM730::GetHighByte(wGoalPosition);
 		param[n++] = CM730::GetLowByte(wDistance);
 		param[n++] = CM730::GetHighByte(wDistance);
+		MotionStatus::m_CurrentJoints.SetValue(id, wGoalPosition);
+		MotionStatus::m_CurrentJoints.SetEnable(id, true);
 		joint_num++;
 
 		id = JointData::ID_HEAD_TILT;
@@ -130,13 +138,14 @@ void initial_pose(double* joints, CM730 * cm730) {
 		param[n++] = CM730::GetHighByte(wGoalPosition);
 		param[n++] = CM730::GetLowByte(wDistance);
 		param[n++] = CM730::GetHighByte(wDistance);
+		MotionStatus::m_CurrentJoints.SetValue(id, wGoalPosition);
+		MotionStatus::m_CurrentJoints.SetEnable(id, true);
 		joint_num++;
 
 		cm730->SyncWrite(MX28::P_GOAL_POSITION_L, 5, JointData::NUMBER_OF_JOINTS - 1, param);	
 	}
 	else {
 		printf("Couldn't read from ROBOT!!\n");
-
 	}
 }
 
@@ -280,12 +289,13 @@ int main(int argc, char* argv[])
 	if (engage) {
 		MotionManager::GetInstance()->SetEnable(true);
 	}
-  
+
 	int d_gain = 0;
+	int max_speed = 512;
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
 		cm730.WriteByte(joint, MX28::P_D_GAIN, d_gain, 0);
-		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, 256, 0);
+		cm730.WriteWord(joint, MX28::P_MOVING_SPEED_L, max_speed, 0);
 
 		MotionStatus::m_CurrentJoints.SetPGain(joint, p_gain);
 		MotionStatus::m_CurrentJoints.SetIGain(joint, 0);
@@ -388,7 +398,7 @@ int main(int argc, char* argv[])
 				MotionManager::GetInstance()->Process(); // does the logging
 			}
 
-	//print_status(&cm730);
+			//print_status(&cm730);
 
 			STRIDE += LINE_SIZE;
 			prev_joint = joint_data;
