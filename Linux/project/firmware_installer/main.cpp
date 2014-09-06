@@ -430,7 +430,8 @@ int main(int argc, char *argv[])
 
     fprintf(stderr, "You can choose to: \n\n"
                     "  (1) CM-730 firmware installation.    (with \"%s\")\n" \
-                    "  (2) Dynamixel firmware installation. (with \"%s\")\n\n", controller_fw, actuator_fw);
+                    "  (2) Dynamixel firmware installation. (with \"%s\")\n\n" \
+					"  (3) Reset MX-28 motors to defaults.", controller_fw, actuator_fw);
     char choice = 0;
     do{
         fprintf(stderr, "Enter your choice: ");
@@ -460,278 +461,316 @@ int main(int argc, char *argv[])
             return 0;
         fprintf(stderr, "Success!! \nBinary size: %ld byte\n\n", binSize);
     }
-
-    // Open port
-    int fd;
-    struct termios oldtio, newtio;
-    char TxCh;
-    char RcvBuff[256] = { 0, };
-    int RcvNum;
-
-    if((fd = open(dev, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0)
-    {
-        fprintf(stderr, "Fail to open port %s\n", dev);
-        return 0;
-    }
-
-    fprintf(stderr, "[ESC] : Quit program \n");
-
-    tcgetattr(fd, &oldtio);
-    memset(&newtio, 0, sizeof(newtio));
-    newtio.c_cflag      = B57600|CS8|CLOCAL|CREAD;
-    newtio.c_iflag      = IGNPAR;
-    newtio.c_oflag      = 0;
-    newtio.c_lflag      = 0;
-    newtio.c_cc[VTIME]  = 0;
-    newtio.c_cc[VMIN]   = 0;
-    tcsetattr(fd, TCSANOW, &newtio);
-    tcflush(fd, TCIFLUSH);
-
-    set_stdin();
-
-    fprintf(stderr, "Press DARwIn-OP's Reset button to start...\n");
-
-    while(1)
-    {
-        r = write(fd, "#", 1);
-        usleep(20000);
-        RcvNum = read(fd, RcvBuff, 256);
-        if(RcvNum > 0)
-        {
-            RcvBuff[RcvNum] = 0;
-            if(strcmp(RcvBuff, "#") == 0)
-            {
-                r = write(fd, "\r", 1);
-                break;
-            }
-        }
-
-        if(kbhit())
-        {
-            TxCh = _getch();
-            if(TxCh == 0x1b)
-                goto EXIT;
-        }
-    }
-
-    if(mode == 1)
-    {
-        /*+++ start download +++*/
-        r = write(fd, "l\r", 2);
-
-        while(1)
-        {
-            usleep(135000);
-            RcvNum = read(fd, RcvBuff, 256);
-            if(RcvNum > 0)
-            {
-                RcvBuff[RcvNum] = 0;
-                fprintf(stderr, "%s", RcvBuff);
-            }
-            else
-                break;
-        }
-
-        fprintf(stderr, "\nErase block complete...\n");
-        usleep(100000);
-
-
-        unsigned char bytesum = 0x00;
-        for(long n=0; n<128*1024; n++)
-            bytesum += binMem[startAddr + n];
-
-        printf("\n");
-        long size = 0;
-        long max_unit = 64;
-        long unit;
-        int res;
-        while(size < binSize)
-        {
-            unit = binSize - size;
-            if(unit > max_unit)
-                unit = max_unit;
-
-            res = write(fd, &binMem[startAddr + size], unit);
-            if(res > 0)
-            {
-                size += res;
-                printf("\rDownloading Firmware (%ld/%ld byte)", size, binSize);
-            }
-        }
-        do
-        {
-            res = write(fd, &bytesum, 1);
-        }while(res < 0);
-
-        printf("\nDownloading Bytesum:%2X\n", bytesum);
-
-        for(int x = 0; x < 100; x++)
-        {
-            usleep(10000);
-            RcvNum = read(fd, RcvBuff, 256);
-            if(RcvNum > 0)
-            {
-                RcvBuff[RcvNum] = 0;
-                fprintf(stderr, "%s", RcvBuff);
-            }
-        }
-        /*--- end download ---*/
-
-        usleep(10000);
-
-        r = write(fd, "\rgo\r", 4); // Exit bootloader
-        usleep(50000);
-        RcvNum = read(fd, RcvBuff, 256);
-        if(RcvNum > 0)
-        {
-            RcvBuff[RcvNum] = 0;
-            printf("%s", RcvBuff);
-        }
-    }
     else if(mode == 2)
-    {
-        /*+++ start download +++*/
-        r = write(fd, "l 8023000\r", 10);
-
-        while(1)
-        {
-            usleep(135000);
-            RcvNum = read(fd, RcvBuff, 256);
-            if(RcvNum > 0)
-            {
-                RcvBuff[RcvNum] = 0;
-                fprintf(stderr, "%s", RcvBuff);
-            }
-            else
-                break;
-        }
-
-        fprintf(stderr, "\nErase block complete...\n");
-        usleep(100000);
-
-        unsigned char bytesum = 0x00;
-        for(long n=0; n<binSize; n++)
-            bytesum += binMem[startAddr + n];
-
-        printf("\n");
-        long size = 0;
-        long max_unit = 64;
-        long unit;
-        int res;
-        while(size < binSize)
-        {
-            unit = binSize - size;
-            if(unit > max_unit)
-                unit = max_unit;
-
-            res = write(fd, &binMem[startAddr + size], unit);
-            if(res > 0)
-            {
-                size += res;
-                printf("\rDownloading Firmware (%ld/%ld byte)", size, binSize);
-            }
-        }
-        do
-        {
-            res = write(fd, &bytesum, 1);
-        }while(res < 0);
-
-        printf("\nDownloading Bytesum:%2X\n", bytesum);
-
-        for(int x = 0; x < 100; x++)
-        {
-            usleep(10000);
-            RcvNum = read(fd, RcvBuff, 256);
-            if(RcvNum > 0)
-            {
-                RcvBuff[RcvNum] = 0;
-                fprintf(stderr, "%s", RcvBuff);
-            }
-        }
-        /*--- end download ---*/
-
-        r = write(fd, "go 8023000", 10);
-        r = write(fd, "\r", 1);
-
-        int wait_count = 0;
-        char last_char = 0;
-        while(1)
-        {
-            if(kbhit())
-            {
-                TxCh = _getch();
-                if(TxCh == 0x1b)
-                    break;
-                else if(TxCh == 127) // backspace
-                    TxCh = 0x08; // replace backspace value
-
-                r = write(fd, &TxCh, 1);
-            }
-
-            RcvNum = read(fd, RcvBuff, 256);
-            if(RcvNum > 0)
-            {
-                RcvBuff[RcvNum] = 0;
-                printf("%s", RcvBuff);
-                last_char = RcvBuff[RcvNum-1];
-                wait_count = 0;
-            }
-            else
-                wait_count++;
-
-            if(wait_count > 200 && last_char == '!')
-                break;
-
-            usleep(20000);
-        }
-
-        reset_stdin();
-
-        tcsetattr(fd, TCSANOW, &oldtio);
-        close(fd);
-
-        fprintf(stderr, "\n\n");
-        LinuxCM730 linux_cm730(dev);
-        CM730 cm730(&linux_cm730);
-        if(cm730.Connect() == true)
-        {
-            int firm_ver = 0;
-            if(cm730.ReadByte(JointData::ID_HEAD_PAN, MX28::P_VERSION, &firm_ver, 0)  != CM730::SUCCESS)
-            {
-                fprintf(stderr, "Can't read firmware version from Dynamixel ID %d!! \n\n", JointData::ID_HEAD_PAN);
-                goto EXIT;
-            }
+	{
+		LinuxCM730 linux_cm730(dev);
+		CM730 cm730(&linux_cm730);
+		if(cm730.Connect() == true)
+		{
+			int firm_ver = 0;
+			if(cm730.ReadByte(JointData::ID_HEAD_PAN, MX28::P_VERSION, &firm_ver, 0)  != CM730::SUCCESS)
+			{
+				fprintf(stderr, "Can't read firmware version from Dynamixel ID %d!! \n\n", JointData::ID_HEAD_PAN);
+				goto EXIT;
+			}
 
 #ifdef MX28_1024
-            if(27 <= firm_ver)
-            {
-                fprintf(stderr, "\n MX-28's firmware is not support 1024 resolution!! \n");
-                fprintf(stderr, " Remove '#define MX28_1024' from 'MX28.h' file and rebuild.\n\n");
-                goto EXIT;
-            }
+			if(27 <= firm_ver)
+			{
+				fprintf(stderr, "\n MX-28's firmware is not support 1024 resolution!! \n");
+				fprintf(stderr, " Remove '#define MX28_1024' from 'MX28.h' file and rebuild.\n\n");
+				goto EXIT;
+			}
 #else
-            if(0 < firm_ver && firm_ver < 27)
-            {
-                fprintf(stderr, "\n MX-28's firmware is not support 4096 resolution!! \n");
-                fprintf(stderr, " Upgrade MX-28's firmware to version 27(0x1B) or higher.\n\n");
-                goto EXIT;
-            }
+			if(0 < firm_ver && firm_ver < 27)
+			{
+				fprintf(stderr, "\n MX-28's firmware is not support 4096 resolution!! \n");
+				fprintf(stderr, " Upgrade MX-28's firmware to version 27(0x1B) or higher.\n\n");
+				goto EXIT;
+			}
 #endif
-            for(int i=JointData::ID_R_SHOULDER_PITCH; i<JointData::NUMBER_OF_JOINTS; i++)
-                Reset(&cm730, i);
+			for(int i=JointData::ID_R_SHOULDER_PITCH; i<JointData::NUMBER_OF_JOINTS; i++)
+				Reset(&cm730, i);
 
-            Reset(&cm730, CM730::ID_CM);
-        }
-        else
-            fprintf(stderr, "CM-730 Connect fail!! \n");
+			Reset(&cm730, CM730::ID_CM);
+		}
+		else
+			fprintf(stderr, "CM-730 Connect fail!! \n");
 
-        return 0;
-    }
+		return 0;
+	}
 
-    EXIT:
-    reset_stdin();
+	// Open port
+	int fd;
+	struct termios oldtio, newtio;
+	char TxCh;
+	char RcvBuff[256] = { 0, };
+	int RcvNum;
 
-    tcsetattr(fd, TCSANOW, &oldtio);
-    printf("\nTerminated program\n\n");
-    return 0;
+	if((fd = open(dev, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0)
+	{
+		fprintf(stderr, "Fail to open port %s\n", dev);
+		return 0;
+	}
+
+	fprintf(stderr, "[ESC] : Quit program \n");
+
+	tcgetattr(fd, &oldtio);
+	memset(&newtio, 0, sizeof(newtio));
+	newtio.c_cflag      = B57600|CS8|CLOCAL|CREAD;
+	newtio.c_iflag      = IGNPAR;
+	newtio.c_oflag      = 0;
+	newtio.c_lflag      = 0;
+	newtio.c_cc[VTIME]  = 0;
+	newtio.c_cc[VMIN]   = 0;
+	tcsetattr(fd, TCSANOW, &newtio);
+	tcflush(fd, TCIFLUSH);
+
+	set_stdin();
+
+	fprintf(stderr, "Press DARwIn-OP's Reset button to start...\n");
+
+	while(1)
+	{
+		r = write(fd, "#", 1);
+		usleep(20000);
+		RcvNum = read(fd, RcvBuff, 256);
+		if(RcvNum > 0)
+		{
+			RcvBuff[RcvNum] = 0;
+			if(strcmp(RcvBuff, "#") == 0)
+			{
+				r = write(fd, "\r", 1);
+				break;
+			}
+		}
+
+		if(kbhit())
+		{
+			TxCh = _getch();
+			if(TxCh == 0x1b)
+				goto EXIT;
+		}
+	}
+
+	if(mode == 1)
+	{
+		/*+++ start download +++*/
+		r = write(fd, "l\r", 2);
+
+		while(1)
+		{
+			usleep(135000);
+			RcvNum = read(fd, RcvBuff, 256);
+			if(RcvNum > 0)
+			{
+				RcvBuff[RcvNum] = 0;
+				fprintf(stderr, "%s", RcvBuff);
+			}
+			else
+				break;
+		}
+
+		fprintf(stderr, "\nErase block complete...\n");
+		usleep(100000);
+
+
+		unsigned char bytesum = 0x00;
+		for(long n=0; n<128*1024; n++)
+			bytesum += binMem[startAddr + n];
+
+		printf("\n");
+		long size = 0;
+		long max_unit = 64;
+		long unit;
+		int res;
+		while(size < binSize)
+		{
+			unit = binSize - size;
+			if(unit > max_unit)
+				unit = max_unit;
+
+			res = write(fd, &binMem[startAddr + size], unit);
+			if(res > 0)
+			{
+				size += res;
+				printf("\rDownloading Firmware (%ld/%ld byte)", size, binSize);
+			}
+		}
+		do
+		{
+			res = write(fd, &bytesum, 1);
+		}while(res < 0);
+
+		printf("\nDownloading Bytesum:%2X\n", bytesum);
+
+		for(int x = 0; x < 100; x++)
+		{
+			usleep(10000);
+			RcvNum = read(fd, RcvBuff, 256);
+			if(RcvNum > 0)
+			{
+				RcvBuff[RcvNum] = 0;
+				fprintf(stderr, "%s", RcvBuff);
+			}
+		}
+		/*--- end download ---*/
+
+		usleep(10000);
+
+		r = write(fd, "\rgo\r", 4); // Exit bootloader
+		usleep(50000);
+		RcvNum = read(fd, RcvBuff, 256);
+		if(RcvNum > 0)
+		{
+			RcvBuff[RcvNum] = 0;
+			printf("%s", RcvBuff);
+		}
+	}
+	else if(mode == 2)
+	{
+		/*+++ start download +++*/
+		r = write(fd, "l 8023000\r", 10);
+
+		while(1)
+		{
+			usleep(135000);
+			RcvNum = read(fd, RcvBuff, 256);
+			if(RcvNum > 0)
+			{
+				RcvBuff[RcvNum] = 0;
+				fprintf(stderr, "%s", RcvBuff);
+			}
+			else
+				break;
+		}
+
+		fprintf(stderr, "\nErase block complete...\n");
+		usleep(100000);
+
+		unsigned char bytesum = 0x00;
+		for(long n=0; n<binSize; n++)
+			bytesum += binMem[startAddr + n];
+
+		printf("\n");
+		long size = 0;
+		long max_unit = 64;
+		long unit;
+		int res;
+		while(size < binSize)
+		{
+			unit = binSize - size;
+			if(unit > max_unit)
+				unit = max_unit;
+
+			res = write(fd, &binMem[startAddr + size], unit);
+			if(res > 0)
+			{
+				size += res;
+				printf("\rDownloading Firmware (%ld/%ld byte)", size, binSize);
+			}
+		}
+		do
+		{
+			res = write(fd, &bytesum, 1);
+		}while(res < 0);
+
+		printf("\nDownloading Bytesum:%2X\n", bytesum);
+
+		for(int x = 0; x < 100; x++)
+		{
+			usleep(10000);
+			RcvNum = read(fd, RcvBuff, 256);
+			if(RcvNum > 0)
+			{
+				RcvBuff[RcvNum] = 0;
+				fprintf(stderr, "%s", RcvBuff);
+			}
+		}
+		/*--- end download ---*/
+
+		r = write(fd, "go 8023000", 10);
+		r = write(fd, "\r", 1);
+
+		int wait_count = 0;
+		char last_char = 0;
+		while(1)
+		{
+			if(kbhit())
+			{
+				TxCh = _getch();
+				if(TxCh == 0x1b)
+					break;
+				else if(TxCh == 127) // backspace
+					TxCh = 0x08; // replace backspace value
+
+				r = write(fd, &TxCh, 1);
+			}
+
+			RcvNum = read(fd, RcvBuff, 256);
+			if(RcvNum > 0)
+			{
+				RcvBuff[RcvNum] = 0;
+				printf("%s", RcvBuff);
+				last_char = RcvBuff[RcvNum-1];
+				wait_count = 0;
+			}
+			else
+				wait_count++;
+
+			if(wait_count > 200 && last_char == '!')
+				break;
+
+			usleep(20000);
+		}
+
+		reset_stdin();
+
+		tcsetattr(fd, TCSANOW, &oldtio);
+		close(fd);
+
+		fprintf(stderr, "\n\n");
+		LinuxCM730 linux_cm730(dev);
+		CM730 cm730(&linux_cm730);
+		if(cm730.Connect() == true)
+		{
+			int firm_ver = 0;
+			if(cm730.ReadByte(JointData::ID_HEAD_PAN, MX28::P_VERSION, &firm_ver, 0)  != CM730::SUCCESS)
+			{
+				fprintf(stderr, "Can't read firmware version from Dynamixel ID %d!! \n\n", JointData::ID_HEAD_PAN);
+				goto EXIT;
+			}
+
+#ifdef MX28_1024
+			if(27 <= firm_ver)
+			{
+				fprintf(stderr, "\n MX-28's firmware is not support 1024 resolution!! \n");
+				fprintf(stderr, " Remove '#define MX28_1024' from 'MX28.h' file and rebuild.\n\n");
+				goto EXIT;
+			}
+#else
+			if(0 < firm_ver && firm_ver < 27)
+			{
+				fprintf(stderr, "\n MX-28's firmware is not support 4096 resolution!! \n");
+				fprintf(stderr, " Upgrade MX-28's firmware to version 27(0x1B) or higher.\n\n");
+				goto EXIT;
+			}
+#endif
+			for(int i=JointData::ID_R_SHOULDER_PITCH; i<JointData::NUMBER_OF_JOINTS; i++)
+				Reset(&cm730, i);
+
+			Reset(&cm730, CM730::ID_CM);
+		}
+		else
+			fprintf(stderr, "CM-730 Connect fail!! \n");
+
+		return 0;
+	}
+
+EXIT:
+	reset_stdin();
+
+	tcsetattr(fd, TCSANOW, &oldtio);
+	printf("\nTerminated program\n\n");
+	return 0;
 }
