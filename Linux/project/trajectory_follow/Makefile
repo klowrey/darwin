@@ -9,7 +9,7 @@
 
 TARGET = follower 
 
-INCLUDE_DIRS = -I../../include -I../../../Framework/include -I/usr/include/boost
+INCLUDE_DIRS = -I../../include -I../../../Framework/include -I/usr/include/boost -I/usr/include/eigen3
 
 CXX = g++
 CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
