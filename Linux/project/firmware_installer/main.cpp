@@ -22,446 +22,446 @@ using namespace Robot;
 
 int _getch()
 {
-    struct termios oldt, newt;
-    int ch;
-    tcgetattr( STDIN_FILENO, &oldt );
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr( STDIN_FILENO, TCSANOW, &newt );
-    ch = getchar();
-    tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
-    return ch;
+	struct termios oldt, newt;
+	int ch;
+	tcgetattr( STDIN_FILENO, &oldt );
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+	ch = getchar();
+	tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+	return ch;
 }
 
 int kbhit(void)
 {
-    struct termios oldt, newt;
-    int ch;
-    int oldf;
+	struct termios oldt, newt;
+	int ch;
+	int oldf;
 
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-    ch = getchar();
+	ch = getchar();
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	fcntl(STDIN_FILENO, F_SETFL, oldf);
 
-    if(ch != EOF)
-    {
-        ungetc(ch, stdin);
-        return 1;
-    }
+	if(ch != EOF)
+	{
+		ungetc(ch, stdin);
+		return 1;
+	}
 
-    return 0;
+	return 0;
 }
 
 struct termios oldterm, new_term;
 void set_stdin(void)
 {
-    tcgetattr(0,&oldterm);
-    new_term = oldterm;
-    new_term.c_lflag &= ~(ICANON | ECHO | ISIG); // 의미는 struct termios를 찾으면 됨.
-    new_term.c_cc[VMIN] = 1;
-    new_term.c_cc[VTIME] = 0;
-    tcsetattr(0, TCSANOW, &new_term);
+	tcgetattr(0,&oldterm);
+	new_term = oldterm;
+	new_term.c_lflag &= ~(ICANON | ECHO | ISIG); // 의미는 struct termios를 찾으면 됨.
+	new_term.c_cc[VMIN] = 1;
+	new_term.c_cc[VTIME] = 0;
+	tcsetattr(0, TCSANOW, &new_term);
 }
 
 void reset_stdin(void)
 {
-    tcsetattr(0, TCSANOW, &oldterm);
+	tcsetattr(0, TCSANOW, &oldterm);
 }
 
 void change_current_dir()
 {
-    int r = 0;
-    char exepath[1024] = {0};
-    if(readlink("/proc/self/exe", exepath, sizeof(exepath)) != -1)
-        r = chdir(dirname(exepath));
+	int r = 0;
+	char exepath[1024] = {0};
+	if(readlink("/proc/self/exe", exepath, sizeof(exepath)) != -1)
+		r = chdir(dirname(exepath));
 }
 
 void help(char *progname)
 {
-    fprintf(stderr, "-----------------------------------------------------------------------\n");
-    fprintf(stderr, "Usage: %s\n" \
-                    " [-h | --help]........: display this help\n" \
-                    " [-d | --device]......: port to open                     (/dev/ttyUSB0)\n" \
-                    " [-c | --controller]..: controller firmware file       (cm730_0x13.hex)\n" \
-                    " [-a | --actuator]....: actuator firmware file (mx28_0x1E+FSR_0x11.hex)\n", progname);
-    fprintf(stderr, "-----------------------------------------------------------------------\n");
-    fprintf(stderr, "Example #1:\n" \
-                    " To open a default port and install with firmware file \"cm730.hex\":\n" \
-                    "  %s -c cm730.hex\n", progname);
-    fprintf(stderr, "-----------------------------------------------------------------------\n");
-    fprintf(stderr, "Example #2:\n" \
-                    " To open a /dev/ttyUSB1 and install with default firmware file name:\n" \
-                    "  %s -d /dev/ttyUSB1 \n", progname);
-    fprintf(stderr, "-----------------------------------------------------------------------\n");
+	fprintf(stderr, "-----------------------------------------------------------------------\n");
+	fprintf(stderr, "Usage: %s\n" \
+			" [-h | --help]........: display this help\n" \
+			" [-d | --device]......: port to open                     (/dev/ttyUSB0)\n" \
+			" [-c | --controller]..: controller firmware file       (cm730_0x13.hex)\n" \
+			" [-a | --actuator]....: actuator firmware file (mx28_0x1E+FSR_0x11.hex)\n", progname);
+	fprintf(stderr, "-----------------------------------------------------------------------\n");
+	fprintf(stderr, "Example #1:\n" \
+			" To open a default port and install with firmware file \"cm730.hex\":\n" \
+			"  %s -c cm730.hex\n", progname);
+	fprintf(stderr, "-----------------------------------------------------------------------\n");
+	fprintf(stderr, "Example #2:\n" \
+			" To open a /dev/ttyUSB1 and install with default firmware file name:\n" \
+			"  %s -d /dev/ttyUSB1 \n", progname);
+	fprintf(stderr, "-----------------------------------------------------------------------\n");
 }
 
 void Reset(CM730 *cm730, int id)
 {
-    int FailCount = 0;
-    int FailMaxCount = 10;
-    printf(" Reset ID:%d...", id);
+	int FailCount = 0;
+	int FailMaxCount = 10;
+	printf(" Reset ID:%d...", id);
 
-    if(cm730->Ping(id, 0) != CM730::SUCCESS)
-    {
-        printf("Fail\n");
-        return;
-    }
+	if(cm730->Ping(id, 0) != CM730::SUCCESS)
+	{
+		printf("Fail\n");
+		return;
+	}
 
-    FailCount = 0;
-    while(1)
-    {
-        if(cm730->WriteByte(id, MX28::P_RETURN_DELAY_TIME, 0, 0) == CM730::SUCCESS)
-            break;
+	FailCount = 0;
+	while(1)
+	{
+		if(cm730->WriteByte(id, MX28::P_RETURN_DELAY_TIME, 0, 0) == CM730::SUCCESS)
+			break;
 
-        FailCount++;
-        if(FailCount > FailMaxCount)
-        {
-            printf("Fail\n");
-            return;
-        }
-        usleep(50000);
-    }
+		FailCount++;
+		if(FailCount > FailMaxCount)
+		{
+			printf("Fail\n");
+			return;
+		}
+		usleep(50000);
+	}
 
-    FailCount = 0;
-    while(1)
-    {
-        if(cm730->WriteByte(id, MX28::P_RETURN_LEVEL, 2, 0) == CM730::SUCCESS)
-            break;
+	FailCount = 0;
+	while(1)
+	{
+		if(cm730->WriteByte(id, MX28::P_RETURN_LEVEL, 2, 0) == CM730::SUCCESS)
+			break;
 
-        FailCount++;
-        if(FailCount > FailMaxCount)
-        {
-            printf("Fail\n");
-            return;
-        }
-        usleep(50000);
-    }
+		FailCount++;
+		if(FailCount > FailMaxCount)
+		{
+			printf("Fail\n");
+			return;
+		}
+		usleep(50000);
+	}
 
-    if(id != CM730::ID_CM)
-    {
-        double cwLimit = MX28::MIN_ANGLE;
-        double ccwLimit = MX28::MAX_ANGLE;
+	if(id != CM730::ID_CM)
+	{
+		double cwLimit = MX28::MIN_ANGLE;
+		double ccwLimit = MX28::MAX_ANGLE;
 
-        switch(id)
-        {
-        case JointData::ID_R_SHOULDER_ROLL:
-            cwLimit = -75.0;
-            ccwLimit = 135.0;
-            break;
+		switch(id)
+		{
+			case JointData::ID_R_SHOULDER_ROLL:
+				cwLimit = -75.0;
+				ccwLimit = 135.0;
+				break;
 
-        case JointData::ID_L_SHOULDER_ROLL:
-            cwLimit = -135.0;
-            ccwLimit = 75.0;
-            break;
+			case JointData::ID_L_SHOULDER_ROLL:
+				cwLimit = -135.0;
+				ccwLimit = 75.0;
+				break;
 
-        case JointData::ID_R_ELBOW:
-            cwLimit = -95.0;
-            ccwLimit = 70.0;
-            break;
+			case JointData::ID_R_ELBOW:
+				cwLimit = -95.0;
+				ccwLimit = 70.0;
+				break;
 
-        case JointData::ID_L_ELBOW:
-            cwLimit = -70.0;
-            ccwLimit = 95.0;
-            break;
+			case JointData::ID_L_ELBOW:
+				cwLimit = -70.0;
+				ccwLimit = 95.0;
+				break;
 
-        case JointData::ID_R_HIP_YAW:
-            cwLimit = -123.0;
-            ccwLimit = 53.0;
-            break;
+			case JointData::ID_R_HIP_YAW:
+				cwLimit = -123.0;
+				ccwLimit = 53.0;
+				break;
 
-        case JointData::ID_L_HIP_YAW:
-            cwLimit = -53.0;
-            ccwLimit = 123.0;
-            break;
+			case JointData::ID_L_HIP_YAW:
+				cwLimit = -53.0;
+				ccwLimit = 123.0;
+				break;
 
-        case JointData::ID_R_HIP_ROLL:
-            cwLimit = -45.0;
-            ccwLimit = 59.0;
-            break;
+			case JointData::ID_R_HIP_ROLL:
+				cwLimit = -45.0;
+				ccwLimit = 59.0;
+				break;
 
-        case JointData::ID_L_HIP_ROLL:
-            cwLimit = -59.0;
-            ccwLimit = 45.0;
-            break;
+			case JointData::ID_L_HIP_ROLL:
+				cwLimit = -59.0;
+				ccwLimit = 45.0;
+				break;
 
-        case JointData::ID_R_HIP_PITCH:
-            cwLimit = -100.0;
-            ccwLimit = 29.0;
-            break;
+			case JointData::ID_R_HIP_PITCH:
+				cwLimit = -100.0;
+				ccwLimit = 29.0;
+				break;
 
-        case JointData::ID_L_HIP_PITCH:
-            cwLimit = -29.0;
-            ccwLimit = 100.0;
-            break;
+			case JointData::ID_L_HIP_PITCH:
+				cwLimit = -29.0;
+				ccwLimit = 100.0;
+				break;
 
-        case JointData::ID_R_KNEE:
-            cwLimit = -6.0;
-            ccwLimit = 130.0;
-            break;
+			case JointData::ID_R_KNEE:
+				cwLimit = -6.0;
+				ccwLimit = 130.0;
+				break;
 
-        case JointData::ID_L_KNEE:
-            cwLimit = -130.0;
-            ccwLimit = 6.0;
-            break;
+			case JointData::ID_L_KNEE:
+				cwLimit = -130.0;
+				ccwLimit = 6.0;
+				break;
 
-        case JointData::ID_R_ANKLE_PITCH:
-            cwLimit = -72.0;
-            ccwLimit = 80.0;
-            break;
+			case JointData::ID_R_ANKLE_PITCH:
+				cwLimit = -72.0;
+				ccwLimit = 80.0;
+				break;
 
-        case JointData::ID_L_ANKLE_PITCH:
-            cwLimit = -80.0;
-            ccwLimit = 72.0;
-            break;
+			case JointData::ID_L_ANKLE_PITCH:
+				cwLimit = -80.0;
+				ccwLimit = 72.0;
+				break;
 
-        case JointData::ID_R_ANKLE_ROLL:
-            cwLimit = -44.0;
-            ccwLimit = 63.0;
-            break;
+			case JointData::ID_R_ANKLE_ROLL:
+				cwLimit = -44.0;
+				ccwLimit = 63.0;
+				break;
 
-        case JointData::ID_L_ANKLE_ROLL:
-            cwLimit = -63.0;
-            ccwLimit = 44.0;
-            break;
+			case JointData::ID_L_ANKLE_ROLL:
+				cwLimit = -63.0;
+				ccwLimit = 44.0;
+				break;
 
-        case JointData::ID_HEAD_TILT:
-            cwLimit = -25.0;
-            ccwLimit = 55.0;
-            break;
-        }
+			case JointData::ID_HEAD_TILT:
+				cwLimit = -25.0;
+				ccwLimit = 55.0;
+				break;
+		}
 
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteWord(id, MX28::P_CW_ANGLE_LIMIT_L, MX28::Angle2Value(cwLimit), 0) == CM730::SUCCESS)
-                break;
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteWord(id, MX28::P_CW_ANGLE_LIMIT_L, MX28::Angle2Value(cwLimit), 0) == CM730::SUCCESS)
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteWord(id, MX28::P_CCW_ANGLE_LIMIT_L, MX28::Angle2Value(ccwLimit), 0) == CM730::SUCCESS)
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteWord(id, MX28::P_CCW_ANGLE_LIMIT_L, MX28::Angle2Value(ccwLimit), 0) == CM730::SUCCESS)
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteByte(id, MX28::P_HIGH_LIMIT_TEMPERATURE, 80, 0) == CM730::SUCCESS)
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteByte(id, MX28::P_HIGH_LIMIT_TEMPERATURE, 80, 0) == CM730::SUCCESS)
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteByte(id, MX28::P_LOW_LIMIT_VOLTAGE, 60, 0) == CM730::SUCCESS)
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteByte(id, MX28::P_LOW_LIMIT_VOLTAGE, 60, 0) == CM730::SUCCESS)
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteByte(id, MX28::P_HIGH_LIMIT_VOLTAGE, 140, 0) == CM730::SUCCESS)
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteByte(id, MX28::P_HIGH_LIMIT_VOLTAGE, 140, 0) == CM730::SUCCESS)
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteWord(id, MX28::P_MAX_TORQUE_L, MX28::MAX_VALUE, 0) == CM730::SUCCESS)
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteWord(id, MX28::P_MAX_TORQUE_L, MX28::MAX_VALUE, 0) == CM730::SUCCESS)
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteByte(id, MX28::P_ALARM_LED, 36, 0) == CM730::SUCCESS) // Overload, Overheat
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteByte(id, MX28::P_ALARM_LED, 36, 0) == CM730::SUCCESS) // Overload, Overheat
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-        FailCount = 0;
-        while(1)
-        {
-            if(cm730->WriteByte(id, MX28::P_ALARM_SHUTDOWN, 36, 0) == CM730::SUCCESS) // Overload, Overheat
-                break;
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+		FailCount = 0;
+		while(1)
+		{
+			if(cm730->WriteByte(id, MX28::P_ALARM_SHUTDOWN, 36, 0) == CM730::SUCCESS) // Overload, Overheat
+				break;
 
-            FailCount++;
-            if(FailCount > FailMaxCount)
-            {
-                printf("Fail\n");
-                return;
-            }
-            usleep(50000);
-        }
-    }
+			FailCount++;
+			if(FailCount > FailMaxCount)
+			{
+				printf("Fail\n");
+				return;
+			}
+			usleep(50000);
+		}
+	}
 
-    printf("Success\n");
+	printf("Success\n");
 }
 
 int main(int argc, char *argv[])
 {
-    int r = 0;
+	int r = 0;
 
-    fprintf(stderr, "\n***********************************************************************\n");
-    fprintf(stderr,   "*             CM-730 & Actuator & FSR Firmware Installer              *\n");
-    fprintf(stderr,   "***********************************************************************\n\n");
+	fprintf(stderr, "\n***********************************************************************\n");
+	fprintf(stderr,   "*             CM-730 & Actuator & FSR Firmware Installer              *\n");
+	fprintf(stderr,   "***********************************************************************\n\n");
 
-    char *controller_fw = (char*)"cm730_0x13.hex";
-    char *actuator_fw = (char*)"mx28_0x1E+FSR_0x11.hex";
-    char *dev = (char*)"/dev/ttyUSB0";
+	char *controller_fw = (char*)"cm730_0x13.hex";
+	char *actuator_fw = (char*)"mx28_0x1E+FSR_0x11.hex";
+	char *dev = (char*)"/dev/ttyUSB0";
 
-    /* parameter parsing */
-    while(1)
-    {
-        int option_index = 0, c = 0;
-        static struct option long_options[] = {
-                {"h", no_argument, 0, 0},
-                {"help", no_argument, 0, 0},
-                {"d", required_argument, 0, 0},
-                {"device", required_argument, 0, 0},
-                {"c", required_argument, 0, 0},
-                {"controller", required_argument, 0, 0},
-                {"a", required_argument, 0, 0},
-                {"actuator", required_argument, 0, 0},
-                {0, 0, 0, 0}
-        };
+	/* parameter parsing */
+	while(1)
+	{
+		int option_index = 0, c = 0;
+		static struct option long_options[] = {
+			{"h", no_argument, 0, 0},
+			{"help", no_argument, 0, 0},
+			{"d", required_argument, 0, 0},
+			{"device", required_argument, 0, 0},
+			{"c", required_argument, 0, 0},
+			{"controller", required_argument, 0, 0},
+			{"a", required_argument, 0, 0},
+			{"actuator", required_argument, 0, 0},
+			{0, 0, 0, 0}
+		};
 
-        /* parsing all parameters according to the list above is sufficent */
-        c = getopt_long_only(argc, argv, "", long_options, &option_index);
+		/* parsing all parameters according to the list above is sufficent */
+		c = getopt_long_only(argc, argv, "", long_options, &option_index);
 
-        /* no more options to parse */
-        if(c == -1) break;
+		/* no more options to parse */
+		if(c == -1) break;
 
-        /* unrecognized option */
-        if(c == '?') {
-            help(argv[0]);
-            return 0;
-        }
+		/* unrecognized option */
+		if(c == '?') {
+			help(argv[0]);
+			return 0;
+		}
 
-        /* dispatch the given options */
-        switch(option_index) {
-        /* h, help */
-        case 0:
-        case 1:
-            help(argv[0]);
-            return 0;
-            break;
+		/* dispatch the given options */
+		switch(option_index) {
+			/* h, help */
+			case 0:
+			case 1:
+				help(argv[0]);
+				return 0;
+				break;
 
-            /* d, device */
-        case 2:
-        case 3:
-            dev = strdup(optarg);
-            break;
+				/* d, device */
+			case 2:
+			case 3:
+				dev = strdup(optarg);
+				break;
 
-            /* c, controller */
-        case 4:
-        case 5:
-            controller_fw = strdup(optarg);
-            break;
+				/* c, controller */
+			case 4:
+			case 5:
+				controller_fw = strdup(optarg);
+				break;
 
-            /* a, actuator */
-        case 6:
-        case 7:
-            actuator_fw = strdup(optarg);
-            break;
+				/* a, actuator */
+			case 6:
+			case 7:
+				actuator_fw = strdup(optarg);
+				break;
 
-        default:
-            help(argv[0]);
-            return 0;
-        }
-    }
+			default:
+				help(argv[0]);
+				return 0;
+		}
+	}
 
-    fprintf(stderr, "You can choose to: \n\n"
-                    "  (1) CM-730 firmware installation.    (with \"%s\")\n" \
-                    "  (2) Dynamixel firmware installation. (with \"%s\")\n\n" \
-					"  (3) Reset MX-28 motors to defaults.", controller_fw, actuator_fw);
-    char choice = 0;
-    do{
-        fprintf(stderr, "Enter your choice: ");
-        std::cin >> choice;
-    }while(choice != '1' && choice != '2');
-    int mode = atoi(&choice);
+	fprintf(stderr, "You can choose to: \n\n"
+			"  (1) CM-730 firmware installation.    (with \"%s\")\n" \
+			"  (2) Dynamixel firmware installation. (with \"%s\")\n" \
+			"  (3) Reset MX-28 motors to defaults.\n\n", controller_fw, actuator_fw);
+	char choice = 0;
+	do{
+		fprintf(stderr, "Enter your choice: ");
+		std::cin >> choice;
+	}while(choice != '1' && choice != '2' && choice != '3');
+	int mode = atoi(&choice);
 
-    unsigned char binMem[MEMORY_MAXSIZE] = { 0xff, };
-    long startAddr;
-    long binSize = 0;
+	unsigned char binMem[MEMORY_MAXSIZE] = { 0xff, };
+	long startAddr;
+	long binSize = 0;
 
-    if(mode == 1)
-    {
-        fprintf(stderr, "\n [ CM-730 firmware installation mode ]\n\n");
-        fprintf(stderr, "Load %s... ", controller_fw);
+	if(mode == 1)
+	{
+		fprintf(stderr, "\n [ CM-730 firmware installation mode ]\n\n");
+		fprintf(stderr, "Load %s... ", controller_fw);
 
-        if(hex2bin(controller_fw, binMem, &startAddr, &binSize) == false)
-            return 0;
-        fprintf(stderr, "Success!! \nBinary size: %ld byte\n\n", binSize);
-    }
-    else if(mode == 2)
-    {
-        fprintf(stderr, "\n [ Dynamixel firmware installation mode ]\n\n");
-        fprintf(stderr, "Load %s... ", actuator_fw);
+		if(hex2bin(controller_fw, binMem, &startAddr, &binSize) == false)
+			return 0;
+		fprintf(stderr, "Success!! \nBinary size: %ld byte\n\n", binSize);
+	}
+	else if(mode == 2)
+	{
+		fprintf(stderr, "\n [ Dynamixel firmware installation mode ]\n\n");
+		fprintf(stderr, "Load %s... ", actuator_fw);
 
-        if(hex2bin(actuator_fw, binMem, &startAddr, &binSize) == false)
-            return 0;
-        fprintf(stderr, "Success!! \nBinary size: %ld byte\n\n", binSize);
-    }
-    else if(mode == 2)
+		if(hex2bin(actuator_fw, binMem, &startAddr, &binSize) == false)
+			return 0;
+		fprintf(stderr, "Success!! \nBinary size: %ld byte\n\n", binSize);
+	}
+	else if(mode == 3)
 	{
 		LinuxCM730 linux_cm730(dev);
 		CM730 cm730(&linux_cm730);
@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
 			if(cm730.ReadByte(JointData::ID_HEAD_PAN, MX28::P_VERSION, &firm_ver, 0)  != CM730::SUCCESS)
 			{
 				fprintf(stderr, "Can't read firmware version from Dynamixel ID %d!! \n\n", JointData::ID_HEAD_PAN);
-				goto EXIT;
+				return 0;
 			}
 
 #ifdef MX28_1024
@@ -479,14 +479,14 @@ int main(int argc, char *argv[])
 			{
 				fprintf(stderr, "\n MX-28's firmware is not support 1024 resolution!! \n");
 				fprintf(stderr, " Remove '#define MX28_1024' from 'MX28.h' file and rebuild.\n\n");
-				goto EXIT;
+				return 0;
 			}
 #else
 			if(0 < firm_ver && firm_ver < 27)
 			{
 				fprintf(stderr, "\n MX-28's firmware is not support 4096 resolution!! \n");
 				fprintf(stderr, " Upgrade MX-28's firmware to version 27(0x1B) or higher.\n\n");
-				goto EXIT;
+				return 0;
 			}
 #endif
 			for(int i=JointData::ID_R_SHOULDER_PITCH; i<JointData::NUMBER_OF_JOINTS; i++)
