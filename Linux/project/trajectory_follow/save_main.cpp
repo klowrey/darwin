@@ -238,7 +238,7 @@ int main(int argc, char* argv[])
 	int p_gain;
 	int i_gain;
 	int d_gain;
-	int data_sets;
+	int sref_size;
 	bool use_gains;
 	double dt;
 	std::string *filename = new std::string();
@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
 			("engage,e", po::value<bool>(&engage)->default_value(false),
 			 "Engage motors for live run")
 			("trajectory,q", po::value<std::string>(filename)->required(), "Binary file of trajectory joint data")
-			("num_data,n", po::value<int>(&data_sets)->default_value(1), "Number of data sets in binary file per timestep")
+			("sref,s", po::value<int>(&sref_size)->default_value(0), "Number of data sets in binary file per timestep")
 			("gains,g", po::value<bool>(&use_gains)->default_value(false), "Use feedback gains if available")
 			("velocity,v", po::value<std::string>(vel_file), "Binary file of joint velocity data")
 			("dt,t", po::value<double>(&dt)->default_value(0.02),
@@ -282,7 +282,7 @@ int main(int argc, char* argv[])
 
 	printf("Engaging joints: %s\n", engage ? "true":"false");
 	printf("Reading trajectory from%s\n", filename->c_str());
-	printf("Number of data sets in file: %d\n", data_sets);
+	printf("Size of SREF vector in file: %d\n", sref_size);
 	printf("Reading velocities from%s\n", vel_file->c_str());
 	printf("Timestep is set at %f\n", dt);
 	printf("P Gain is set at %d\n", p_gain);
@@ -291,7 +291,9 @@ int main(int argc, char* argv[])
 
 	int STRIDE = 0;
 	// TODO line_size might include max velocities --> 41
-	const int LINE_SIZE = 1 + (data_sets * 20);
+	const int A_size = 20*sref_size; 
+	const int LINE_SIZE = 1 + 20 + sref_size + A_size; // pos / uref, A matrix, sref
+	printf("\nFile line size should be %d\n", LINE_SIZE);
 
 	static struct timespec start_time;
 	static struct timespec end_time;
@@ -458,7 +460,7 @@ int main(int argc, char* argv[])
 					//printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[joint], interp[joint], joint_data[joint]);
 				}
 
-				if (data_sets > 3 && use_gains == true) {
+				if (sref_size > 1 && use_gains == true) {
 					// TODO probably not a good idea, but for now...
 					// Interpolate SREF
 					for (int idx=21; idx<=60; idx++) {
@@ -478,25 +480,20 @@ int main(int argc, char* argv[])
 						s_vec[i++] = joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 					for(int id = 2; id <= 18; id+=2) // Left Joints
 						s_vec[i++] = joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
-					//s << joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 					for(int id = 19; id <= 20; id++) // Head Joints
 						s_vec[i++] = joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
-					//s << joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 
 					for(int id = 1; id <= 17; id+=2) // Right Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
-					//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 					for(int id = 2; id <= 18; id+=2) // Left Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
-					//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 					for(int id = 19; id <= 20; id++) // Head Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
-					//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 
-					Map<VectorXd> s(s_vec, 40);
-					Map<VectorXd> sref(interp+1+20, 40); // better way of indexing this?
+					Map<VectorXd> s(s_vec, sref_size);
+					Map<VectorXd> sref(interp+1+20, sref_size); // better way of indexing this?
 
-					Map<MatrixXd> A(interp+1+20+40, 20, 40); // better way of indexing this?
+					Map<MatrixXd> A(interp+1+20+sref_size, 20, sref_size); // better way of indexing this?
 					//printf("A: %d rows, %d cols\n", A.rows(), A.cols());
 					//printf("s: %d rows, %d cols\n", s.rows(), s.cols());
 					//printf("sref: %d rows, %d cols\n", sref.rows(), sref.cols());
@@ -513,11 +510,6 @@ int main(int argc, char* argv[])
 				}
 
 				set_positions(percent, interp);
-
-
-				//if(joint_num > 0 && engage) {
-				//cm730.SyncWrite(MX28::P_GOAL_POSITION_L, 3, joint_num, param);
-				//}
 
 				MotionManager::GetInstance()->Process(); // does the logging
 			}
