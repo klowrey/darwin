@@ -172,7 +172,7 @@ class Robotis_Servo():
                 'max_ang': math.radians(180),
                 'min_ang': math.radians(-180),
                 'flipped': False,
-                'max_speed': math.radians(100)
+                'max_speed': 0 #math.radians(100)
                 }
         else: # Common settings for RX-series.  Can overload in servo_config.py
             defaults = {
@@ -291,9 +291,9 @@ class Robotis_Servo():
         # speed
         rpm = ((data[2] | (data[3]<<8)) & 0x3FF)  * 0.11   # into rpm
         if data[3] >> 2 & 1 == 0:
-            qvel = -1.0 * rpm
-        else:
             qvel = 1.0 * rpm
+        else:
+            qvel = -1.0 * rpm
         qvel = qvel * 0.104719755
 
         #qvel = data[2] + (data[3] >> 6) * 256
@@ -322,21 +322,21 @@ class Robotis_Servo():
     def move_angle(self, ang, angvel=None, blocking=False):
         ''' move to angle (radians)
         '''
-        if angvel == None:
-            angvel = self.settings['max_speed']
+        #if angvel == None:
+        #    angvel = self.settings['max_speed']
 
-        if angvel > self.settings['max_speed']:
-            print 'lib_robotis.move_angle: angvel too high - %.2f deg/s' % (math.degrees(angvel))
-            print 'lib_robotis.ignoring move command.'
-            return
+        #if angvel > self.settings['max_speed']:
+        #    print 'lib_robotis.move_angle: angvel too high - %.2f deg/s' % (math.degrees(angvel))
+        #    print 'lib_robotis.ignoring move command.'
+        #    return
 
-        if ang > self.settings['max_ang'] or ang < self.settings['min_ang']:
-            print 'lib_robotis.move_angle: angle out of range- ', math.degrees(ang)
-            print 'lib_robotis.ignoring move command.'
-            return
+        #if ang > self.settings['max_ang'] or ang < self.settings['min_ang']:
+        #    print 'lib_robotis.move_angle: angle out of range- ', math.degrees(ang)
+        #    print 'lib_robotis.ignoring move command.'
+        #    return
 
-        if angvel != None:
-            self.set_angvel(angvel)
+        #if angvel != None:
+        #    self.set_angvel(angvel)
 
         if self.settings['flipped']:
             ang = ang * -1.0
@@ -392,9 +392,11 @@ class Robotis_Servo():
     def write_p_gain(self, p_gain):
         return self.write_address( 0x1c, [p_gain] )
 
+    def write_i_gain(self, i_gain):
+        return self.write_address( 0x1b, [i_gain] )
+
     def write_d_gain(self, d_gain):
         return self.write_address( 0x1a, [d_gain] )
-
 
     def __calc_checksum(self, msg):
         chksum = 0

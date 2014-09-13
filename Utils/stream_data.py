@@ -14,22 +14,23 @@ dyn = USB2Dynamixel_Device('/dev/ttyUSB0', 1000000)
 argc = len(sys.argv)
 
 if argc < 2:
-    print "single_servo.py [lock motor] [servo id = 1] [p gain = 32] [d gain = 0]"
+    print "single_servo.py [lock motor] [update dt] [servo id = 1] [p gain = 32] [d gain = 0]"
     sys.exit(0)
 
 engage = int(sys.argv[1])
+update = float(sys.argv[2])
 
 servo_id = 1
-if argc >= 3:
-    servo_id = int(sys.argv[2])
+if argc > 3:
+    servo_id = int(sys.argv[3])
 
 p_gain = 32
-if argc >= 4:
-    p_gain = int(sys.argv[3])
+if argc > 4:
+    p_gain = int(sys.argv[4])
 
 d_gain = 0
-if argc >= 5:
-    d_gain = int(sys.argv[4])
+if argc > 5:
+    d_gain = int(sys.argv[5])
 
 
 print "Tryign to connect to servo %d" % servo_id
@@ -59,6 +60,8 @@ s_ = time.time()
 
 if engage == 0 :
     p.disable_torque()
+else:
+    p.enable_torque()
 
 # play trajectory while collecting data
 while True:
@@ -69,17 +72,18 @@ while True:
     # sleep if not caught up?
     #print t, c
     t_ = time.time() - s_
-    time.sleep(0.5)
+    time.sleep(update)
     q, v, load, volt, temp = p.read_bulk()
     #print 'Time: %f' % (t_ - s_)
 
     #c = 0
 
-    print "Qpos: %f" % q
-    print "Qvel: %f" % v
-    print "load: %d" % load
-    print "volt: %2.1f" % volt
-    print "temp: %d" % temp
+    print "Qpos: %f\tQvel: %f\tload: %d\tvolt: %2.1f\ttemp: %d" % \
+            (q, v, load, volt, temp)
+    #print "Qvel: %f" % v
+    #print "load: %d" % load
+    #print "volt: %2.1f" % volt
+    #print "temp: %d" % temp
 
 
 
