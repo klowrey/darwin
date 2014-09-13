@@ -18,7 +18,6 @@
 
 #include <boost/program_options.hpp>
 
-
 #define U2D_DEV_NAME        "/dev/ttyUSB0"
 
 using namespace Robot;
@@ -159,52 +158,52 @@ void initial_pose(double* joints, CM730 * cm730) {
 int samples;
 
 double* open_read_binary(const char* filename, int LINE_SIZE) {
-   FILE * trajectory_file  = fopen(filename, "rb");
+	FILE * trajectory_file  = fopen(filename, "rb");
 
-   if (!trajectory_file) {
-      printf("Unable to open trajectory file %s!\n", filename);
-      return 0;
-   }
+	if (!trajectory_file) {
+		printf("Unable to open trajectory file %s!\n", filename);
+		return 0;
+	}
 
-   fseek(trajectory_file, 0, SEEK_END);
-   unsigned long fileLen = ftell(trajectory_file);
-   fseek(trajectory_file, 0, SEEK_SET);
+	fseek(trajectory_file, 0, SEEK_END);
+	unsigned long fileLen = ftell(trajectory_file);
+	fseek(trajectory_file, 0, SEEK_SET);
 
-   if (fileLen % sizeof(double)) {
-      printf("Mis-aligned data from trajectory file %s; %d extra doubles\n",
-            filename, fileLen % sizeof(double));
-      fclose(trajectory_file);
-      return 0;
-   }
+	if (fileLen % sizeof(double)) {
+		printf("Mis-aligned data from trajectory file %s; %d extra doubles\n",
+				filename, fileLen % sizeof(double));
+		fclose(trajectory_file);
+		return 0;
+	}
 
-   samples = fileLen/sizeof(double)/LINE_SIZE;
+	samples = fileLen/sizeof(double)/LINE_SIZE;
 
-   printf("Grabbed %d data samples from file sized %lu bytes.\n", samples, fileLen);
+	printf("Grabbed %d data samples from file sized %lu bytes.\n", samples, fileLen);
 
-   double* data_ptr = (double*) malloc(fileLen);
+	double* data_ptr = (double*) malloc(fileLen);
 
-   fread((void*)data_ptr, fileLen, 1, trajectory_file);
-   fclose(trajectory_file);
+	fread((void*)data_ptr, fileLen, 1, trajectory_file);
+	fclose(trajectory_file);
 
-   return data_ptr;
+	return data_ptr;
 }
 
 void print_status(CM730 * cm730) {
-   printf("Joint Info:\n");
-   int out;
-   for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
+	printf("Joint Info:\n");
+	int out;
+	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		printf("Joint: [%d]\t", joint);
-      cm730->ReadByte(joint, MX28::P_P_GAIN, &out, 0);
-      printf("P: %d ", out);
-      cm730->ReadByte(joint, MX28::P_I_GAIN, &out, 0);
-      printf("I: %d ", out);
-      cm730->ReadByte(joint, MX28::P_D_GAIN, &out, 0);
-      printf("D: %d\t", out);
-      cm730->ReadByte(joint, MX28::P_PRESENT_VOLTAGE, &out, 0);
-      printf("Volts: %d ", out);
-      cm730->ReadWord(joint, MX28::P_MOVING_SPEED_L, &out, 0);
-      printf("Speed: %3.1f %% max speed\n", 100.0*out/1024.0);
-   }
+		cm730->ReadByte(joint, MX28::P_P_GAIN, &out, 0);
+		printf("P: %d ", out);
+		cm730->ReadByte(joint, MX28::P_I_GAIN, &out, 0);
+		printf("I: %d ", out);
+		cm730->ReadByte(joint, MX28::P_D_GAIN, &out, 0);
+		printf("D: %d\t", out);
+		cm730->ReadByte(joint, MX28::P_PRESENT_VOLTAGE, &out, 0);
+		printf("Volts: %d ", out);
+		cm730->ReadWord(joint, MX28::P_MOVING_SPEED_L, &out, 0);
+		printf("Speed: %3.1f %% max speed\n", 100.0*out/1024.0);
+	}
 }
 
 
@@ -332,16 +331,16 @@ int main(int argc, char* argv[])
 	}
 
 	/*
-		double* vel_line = NULL;
-		if (vel_file->empty() == false) {
-		vel_line = open_read_binary(vel_file->c_str(), LINE_SIZE);
+	   double* vel_line = NULL;
+	   if (vel_file->empty() == false) {
+	   vel_line = open_read_binary(vel_file->c_str(), LINE_SIZE);
 
-		if (vel_line == NULL) {
-		printf("Bad velocity file\n");
-		return 0;
-		}
-		}
-		*/
+	   if (vel_line == NULL) {
+	   printf("Bad velocity file\n");
+	   return 0;
+	   }
+	   }
+	   */
 
 	double* joint_data;
 	double* prev_joint;
@@ -421,18 +420,18 @@ int main(int argc, char* argv[])
 
 			// can print out 20 joint datas
 			/*
-				printf("t: %1.3f; ", prev_joint[0]);
-				for (int joint=1; joint<20; joint++) {
-				printf("%1.3f ", prev_joint[joint]);
-				}
-				printf("\n");
+			   printf("t: %1.3f; ", prev_joint[0]);
+			   for (int joint=1; joint<20; joint++) {
+			   printf("%1.3f ", prev_joint[joint]);
+			   }
+			   printf("\n");
 
-				printf("t: %1.3f; ", joint_data[0]);
-				for (int joint=1; joint<20; joint++) {
-				printf("%1.3f ", joint_data[joint]);
-				}
-				printf("\n");
-				*/
+			   printf("t: %1.3f; ", joint_data[0]);
+			   for (int joint=1; joint<20; joint++) {
+			   printf("%1.3f ", joint_data[joint]);
+			   }
+			   printf("\n");
+			   */
 
 			printf("%f ??? %f\n", time_passed, timestamp);
 			while ( time_passed < timestamp) {
@@ -479,20 +478,20 @@ int main(int argc, char* argv[])
 						s_vec[i++] = joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 					for(int id = 2; id <= 18; id+=2) // Left Joints
 						s_vec[i++] = joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
-						//s << joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
+					//s << joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 					for(int id = 19; id <= 20; id++) // Head Joints
 						s_vec[i++] = joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
-						//s << joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
+					//s << joint2radian(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 
 					for(int id = 1; id <= 17; id+=2) // Right Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
-						//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
+					//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 					for(int id = 2; id <= 18; id+=2) // Left Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
-						//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
+					//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 					for(int id = 19; id <= 20; id++) // Head Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
-						//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
+					//s << j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 
 					Map<VectorXd> s(s_vec, 40);
 					Map<VectorXd> sref(interp+1+20, 40); // better way of indexing this?
@@ -504,7 +503,7 @@ int main(int argc, char* argv[])
 					MatrixXd vec =  A * (s-sref); // eigen so eassyyyy
 
 					double* mult;
-					
+
 					//printf("Multiplcation gives us %d rows, %d cols\n", vec.rows(), vec.cols());
 					Map<MatrixXd> (s_vec, vec.rows(), vec.cols()) = vec;
 

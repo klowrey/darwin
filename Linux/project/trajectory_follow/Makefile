@@ -14,11 +14,11 @@ INCLUDE_DIRS = -I../../include -I../../../Framework/include -I/usr/include/boost
 CXX = g++
 CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
 #CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
-LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options
+LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -lowlsock
 
 OBJECTS =   main.o 
 
-all: $(TARGET) logger
+all: $(TARGET) logger ps_logger
 
 clean:
 	rm -f *.a *.o $(TARGET) core *~ *.so *.lo
@@ -38,6 +38,10 @@ $(TARGET): darwin.a $(OBJECTS)
 logger: darwin.a save_main.o 
 	$(CXX) $(CFLAGS) save_main.o ../../lib/darwin.a -o logger $(LFLAGS)
 	chmod 755 logger 
+
+ps_logger: darwin.a ps_main.o 
+	$(CXX) $(CFLAGS) save_main.o ../../lib/darwin.a -o ps_logger $(LFLAGS)
+	chmod 755 ps_logger 
 
 # useful to make a backup "make tgz"
 tgz: clean
