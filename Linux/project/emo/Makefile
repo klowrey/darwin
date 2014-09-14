@@ -11,7 +11,7 @@ TARGET = phase_accel
 
 CXX = g++
 INCLUDE_DIRS = -I../../include -I../../../Framework/include 
-LINK_DIRS = -L.
+LINK_DIRS = 
 CXXFLAGS +=	-O2 -DLINUX -Wall -fmessage-length=0 -march=i686 $(INCLUDE_DIRS) 
 LIBS += -lpthread -lrt -lowlsock
 

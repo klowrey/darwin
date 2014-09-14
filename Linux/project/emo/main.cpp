@@ -130,7 +130,6 @@ int main()
          clock_gettime(CLOCK_MONOTONIC, &interval);
          time = diff_sec(start_time, interval);
 
-
          // Gyro and Accel
          gyro_z = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_Z_L], table[CM730::P_GYRO_Z_H]));
          gyro_y = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_Y_L], table[CM730::P_GYRO_Y_H]));
@@ -139,13 +138,6 @@ int main()
          accel_z = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_Z_L], table[CM730::P_ACCEL_Z_H]));
          accel_y = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_Y_L], table[CM730::P_ACCEL_Y_H]));
          accel_x = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_X_L], table[CM730::P_ACCEL_X_H]));
-
-         if (diff_sec(prev_int, interval) > 1.0) {
-            printf("\r");
-            printf("TIME: %1.3f\tACCEL: %1.3f %1.3f %1.3f\tGRYO: %1.3f %1.3f %1.3f",
-                  time, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z);
-            clock_gettime(CLOCK_MONOTONIC, &prev_int);
-         }
 
          // Phasespace
          // Rigid body -- we have to set the rigid body from this end?
@@ -210,7 +202,15 @@ int main()
                   double z = markers[i].z/1000.0;
                }
             }
-            printf("\t %d good markers", n);
+            //printf("\t %d good markers", n);
+         }
+
+			// print
+			if (diff_sec(prev_int, interval) > 1.0) {
+            printf("TIME: %1.3f\tACCEL: %1.3f %1.3f %1.3f\tGRYO: %1.3f %1.3f %1.3f Markers %d\n",
+                  time, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, n);
+
+            clock_gettime(CLOCK_MONOTONIC, &prev_int);
          }
       }
    }
