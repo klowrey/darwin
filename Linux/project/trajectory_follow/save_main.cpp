@@ -38,6 +38,13 @@ int _getch()
 	return ch;
 }
 
+double accel_g(int accel) {
+	return ((accel-512) / 128.0); // in m/s^2
+}
+double gyro_radps(int gyro) {
+	return (gyro-512)*0.017453229251;
+}
+
 volatile bool ready = false;
 
 void* walk_thread(void* ptr)
@@ -51,6 +58,91 @@ void* walk_thread(void* ptr)
 		}
 	}
 	return NULL;
+}
+
+double twoKp = 100.0;
+double twoKi = 0.0;
+double q0=0.65;
+double q1=-0.3;
+double q2=0.3;
+double q3=0.65;
+
+void MahonyAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
+	double recipNorm;
+	double integralFBx=0.0, integralFBy=0.0, integralFBz=0.0;
+	double halfvx, halfvy, halfvz;
+	double halfex, halfey, halfez;
+	double qa, qb, qc;
+	//double q0, q1, q2, q3;
+
+	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
+	if(!((ax == 0.0) && (ay == 0.0) && (az == 0.0))) {
+
+		// Normalise accelerometer measurement
+		//recipNorm = invSqrt(ax * ax + ay * ay + az * az);
+		recipNorm = 1.0/sqrt(ax * ax + ay * ay + az * az);
+		ax *= recipNorm;
+		ay *= recipNorm;
+		az *= recipNorm;        
+
+		// Estimated direction of gravity and vector perpendicular to magnetic flux
+		halfvx = q1 * q3 - q0 * q2;
+		halfvy = q0 * q1 + q2 * q3;
+		halfvz = q0 * q0 - 0.5 + q3 * q3;
+
+		// Error is sum of cross product between estimated and measured direction of gravity
+		halfex = (ay * halfvz - az * halfvy);
+		halfey = (az * halfvx - ax * halfvz);
+		halfez = (ax * halfvy - ay * halfvx);
+
+		// Compute and apply integral feedback if enabled
+		if(twoKi > 0.0) {
+			integralFBx += twoKi * halfex * dt;	// integral error scaled by Ki
+			integralFBy += twoKi * halfey * dt;
+			integralFBz += twoKi * halfez * dt;
+			gx += integralFBx;	// apply inegral feedback
+			gy += integralFBy;
+			gz += integralFBz;
+		}
+		else {
+			integralFBx = 0.0;	// prevent integral windup
+			integralFBy = 0.0;
+			integralFBz = 0.0;
+		}
+
+		// Apply proportional feedback
+		gx += twoKp * halfex;
+		gy += twoKp * halfey;
+		gz += twoKp * halfez;
+	}
+
+	// Integrate rate of change of quaternion
+	gx *= (0.5 * dt);		// pre-multiply common factors
+	gy *= (0.5 * dt);
+	gz *= (0.5 * dt);
+	qa = q0;
+	qb = q1;
+	qc = q2;
+	q0 += (-qb * gx - qc * gy - q3 * gz);
+	q1 += (qa * gx + qc * gz - q3 * gy);
+	q2 += (qa * gy - qb * gz + q3 * gx);
+	q3 += (qa * gz + qb * gy - qc * gx); 
+
+	// Normalise quaternion
+	//recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+	//recipNorm = 1.0/sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+	//q0 *= recipNorm;
+	//q1 *= recipNorm;
+	//q2 *= recipNorm;
+	//q3 *= recipNorm;
+
+	//quat o;
+	//o.q0 = q0;
+	//o.q1 = q1;
+	//o.q2 = q2;
+	//o.q3 = q3;
+
+	//return o;
 }
 
 void initial_pose(double* joints, CM730 * cm730) {
@@ -333,21 +425,21 @@ int main(int argc, char* argv[])
 	}
 
 	/*
-	   double* vel_line = NULL;
-	   if (vel_file->empty() == false) {
-	   vel_line = open_read_binary(vel_file->c_str(), LINE_SIZE);
+		double* vel_line = NULL;
+		if (vel_file->empty() == false) {
+		vel_line = open_read_binary(vel_file->c_str(), LINE_SIZE);
 
-	   if (vel_line == NULL) {
-	   printf("Bad velocity file\n");
-	   return 0;
-	   }
-	   }
-	   */
+		if (vel_line == NULL) {
+		printf("Bad velocity file\n");
+		return 0;
+		}
+		}
+		*/
 
 	double* joint_data;
 	double* prev_joint;
 	double* interp = (double*) malloc(LINE_SIZE*sizeof(double));
-	double* s_vec= (double*) malloc(40*sizeof(double));
+	double* s_vec= (double*) malloc(sref_size*sizeof(double));
 
 	//fread((void*)binary_line, fileLen, 1, trajectory_file);
 	//fclose(trajectory_file);
@@ -410,6 +502,8 @@ int main(int argc, char* argv[])
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
 
+	std::ofstream out("TEST.txt");
+
 	// there is still data in the buffer
 	for (int sample = 1; sample<samples; sample++) {
 		printf("%3.2f percent through the file.\n", (double)sample/samples);
@@ -422,18 +516,18 @@ int main(int argc, char* argv[])
 
 			// can print out 20 joint datas
 			/*
-			   printf("t: %1.3f; ", prev_joint[0]);
-			   for (int joint=1; joint<20; joint++) {
-			   printf("%1.3f ", prev_joint[joint]);
-			   }
-			   printf("\n");
+				printf("t: %1.3f; ", prev_joint[0]);
+				for (int joint=1; joint<20; joint++) {
+				printf("%1.3f ", prev_joint[joint]);
+				}
+				printf("\n");
 
-			   printf("t: %1.3f; ", joint_data[0]);
-			   for (int joint=1; joint<20; joint++) {
-			   printf("%1.3f ", joint_data[joint]);
-			   }
-			   printf("\n");
-			   */
+				printf("t: %1.3f; ", joint_data[0]);
+				for (int joint=1; joint<20; joint++) {
+				printf("%1.3f ", joint_data[joint]);
+				}
+				printf("\n");
+				*/
 
 			printf("%f ??? %f\n", time_passed, timestamp);
 			while ( time_passed < timestamp) {
@@ -450,8 +544,9 @@ int main(int argc, char* argv[])
 				printf("percent: %f, %f %f\n", percent, prev_joint[0], joint_data[0]);
 
 				clock_gettime(CLOCK_MONOTONIC, &end_time);
-				time_passed = sec_diff(start_time, end_time);
-				//printf("s: %f e: %f\n", timespec2sec(start_time), timespec2sec(end_time));
+				//double t_now = sec_diff(start_time, end_time);
+				double dt_interp = sec_diff(start_time, end_time) - time_passed;
+				time_passed = time_passed + dt_interp; 
 
 				// INTERPOLATE POSITION aka (uref+du)
 				for (int joint=1; joint<=20; joint++) {
@@ -462,14 +557,8 @@ int main(int argc, char* argv[])
 
 				if (sref_size > 1 && use_gains == true) {
 					// TODO probably not a good idea, but for now...
-					// Interpolate SREF
-					for (int idx=21; idx<=60; idx++) {
-						double diff = joint_data[idx] - prev_joint[idx];
-						interp[idx] = prev_joint[idx] + percent*diff;
-					}
-
-					// Interpolate A
-					for (int idx=61; idx<=860; idx++) {
+					// Interpolate SREF & A matrix
+					for (int idx=21; idx<LINE_SIZE; idx++) {
 						double diff = joint_data[idx] - prev_joint[idx];
 						interp[idx] = prev_joint[idx] + percent*diff;
 					}
@@ -490,24 +579,55 @@ int main(int argc, char* argv[])
 					for(int id = 19; id <= 20; id++) // Head Joints
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 
-					Map<VectorXd> s(s_vec, sref_size);
 					Map<VectorXd> sref(interp+1+20, sref_size); // better way of indexing this?
+
+					// TODO TEMP HACK FOR BAD MOTOR 20
+					//s_vec[19] = sref(19);
+					//s_vec[39] = sref(39);
+
+					// TODO Temp hack for 0 error in root pos, root vel, etc etc
+					if (sref_size > 40) {
+						for (int i=40; i<sref_size; i++) {
+							s_vec[i] = sref(i);
+						}
+					}
+
+					Map<VectorXd> s(s_vec, sref_size);
+
+					printf("Error sum: %f\n", (s-sref).sum());
 
 					Map<MatrixXd> A(interp+1+20+sref_size, 20, sref_size); // better way of indexing this?
 					//printf("A: %d rows, %d cols\n", A.rows(), A.cols());
 					//printf("s: %d rows, %d cols\n", s.rows(), s.cols());
 					//printf("sref: %d rows, %d cols\n", sref.rows(), sref.cols());
-					MatrixXd vec =  A * (s-sref); // eigen so eassyyyy
+					MatrixXd vec =  A * (s-sref);
 
-					double* mult;
-
-					//printf("Multiplcation gives us %d rows, %d cols\n", vec.rows(), vec.cols());
 					Map<MatrixXd> (s_vec, vec.rows(), vec.cols()) = vec;
 
 					for (int idx=1; idx<=20; idx++) {
 						interp[idx] = interp[idx] + s_vec[idx-1];
 					}
 				}
+
+				//double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
+				//double gyro_y = -1.0*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
+				//double gyro_x = -1.0*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
+
+				//double accel_z = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
+				//double accel_x = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
+				//double accel_y = -1.0*accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
+
+				double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
+				double gyro_y = -1.0*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
+				double gyro_x = -1.0*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
+
+				double accel_x = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
+				double accel_y = -1.0*accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
+				double accel_z = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
+
+				printf("dt_interp: %f\n", dt_interp);
+				MahonyAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
+				out << time<<","<< q0<<","<< q1<<","<< q2<<","<< q3<<std::endl;
 
 				set_positions(percent, interp);
 
@@ -526,6 +646,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
+
 
 	clock_gettime(CLOCK_MONOTONIC, &final_time);
 	printf("Trajectory took %f seconds\n", sec_diff(start_time, final_time));
