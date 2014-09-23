@@ -12,9 +12,12 @@ LIBS += -lpthread -lrt
 
 .PHONY: all clean
 
-all: darwin.a main
+all: darwin.a main filt
 
 main: main.o ../../lib/darwin.a
+	$(CXX) $^ -o $@ $(CXXFLAGS) 
+
+filt: filt.o ../../lib/darwin.a
 	$(CXX) $^ -o $@ $(CXXFLAGS) 
 
 %.o: %.cc

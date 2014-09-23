@@ -12,6 +12,28 @@
 #define PHASESPACE_CONFIDENCE 1
 
 
+float RIGID_BODY[MARKER_COUNT][3] = {
+	{0.00, 0.00, 0.00},
+	{69.24, 3.39, -74.19}, 
+	{43.14, 19.77, 21.19},
+	{78.63, -101.10, 19.91}, 
+	{16.91, -7.61, -69.78},
+	{94.86, -37.21, 32.17},
+	{21.44, 2.66, -31.64},
+	{115.67, -49.50, -45.21} 
+};
+
+
+// data buffer
+#define NDATA 15000
+float pose[NDATA][7];
+float cond[NDATA];
+double tm[NDATA];
+int frame[NDATA];
+double accel[NDATA][3];
+double gyro[NDATA][3];
+
+
 using namespace Robot;
 
 double diff_sec(timespec start, timespec end)
@@ -90,130 +112,98 @@ int main()
 	// Init Gyro & Accel
 	unsigned char table[CM730::MAXNUM_ADDRESS];
 
-	double gyro_z, gyro_y, gyro_x, accel_z, accel_y, accel_x;
 	double time;
 
-   // Init Phasespace Marker Tracking
-   OWLRigid rigid;
-   OWLMarker markers[32];
-   OWLCamera cameras[32];
-   int tracker;
-   if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
-      printf("Couldn't connect to Phase Space\n");
-      return 0;
-   }
-   // create tracker 0
-   tracker = 0;
-   owlTrackeri(tracker, OWL_CREATE, OWL_POINT_TRACKER);
-   for (int i = 0; i < MARKER_COUNT; i++) {
-      owlMarkeri(MARKER(tracker, i), OWL_SET_LED, i);
-   }
-   owlTracker(tracker, OWL_ENABLE);
-   if (!owlGetStatus()) {
-      owl_print_error("error in point tracker setup", owlGetError());
-      return 0;
-   }
-   owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
-   owlSetInteger(OWL_STREAMING, OWL_ENABLE);
+	// Init Phasespace Marker Tracking
+	OWLRigid rigid;
+	OWLMarker markers[32];
+	OWLCamera cameras[32];
+	int tracker;
+	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
+		printf("Couldn't connect to Phase Space\n");
+		return 0;
+	}
+	// create tracker 0
+	tracker = 0;
+	owlTrackeri(tracker, OWL_CREATE, OWL_RIGID_TRACKER);
+	for (int i = 0; i < MARKER_COUNT; i++) {
+		owlMarkeri(MARKER(tracker, i), OWL_SET_LED, i);
+		owlMarkerfv(MARKER(tracker, i), OWL_SET_POSITION, RIGID_BODY[i]);
+	}
+	owlTracker(tracker, OWL_ENABLE);
+	if (!owlGetStatus()) {
+		owl_print_error("error in point tracker setup", owlGetError());
+		return 0;
+	}
+	owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
+	owlSetInteger(OWL_STREAMING, OWL_ENABLE);
 
 
-   //////////////////// Begin Collection /////////////////////////////
+	//////////////////// Begin Collection /////////////////////////////
 
-   clock_gettime(CLOCK_MONOTONIC, &start_time);
-   clock_gettime(CLOCK_MONOTONIC, &prev_int);
+	clock_gettime(CLOCK_MONOTONIC, &start_time);
+	clock_gettime(CLOCK_MONOTONIC, &prev_int);
 
-   while (1) {
-      // reads a chunk of data into table to be formatted after
-      if(cm730.ReadTable(CM730::ID_CM, CM730::P_GYRO_Z_L, CM730::P_ACCEL_Z_H, table, 0) == CM730::SUCCESS)
-      {
-         // Darwin Time
-         clock_gettime(CLOCK_MONOTONIC, &interval);
-         time = diff_sec(start_time, interval);
+	int cnt = 0;
+	int nrigid, nmarker, err;
 
-         // Gyro and Accel
-         gyro_z = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_Z_L], table[CM730::P_GYRO_Z_H]));
-         gyro_y = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_Y_L], table[CM730::P_GYRO_Y_H]));
-         gyro_x = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_X_L], table[CM730::P_GYRO_X_H]));
+	FILE* fp = fopen("data.txt", "wt");
 
-         accel_z = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_Z_L], table[CM730::P_ACCEL_Z_H]));
-         accel_y = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_Y_L], table[CM730::P_ACCEL_Y_H]));
-         accel_x = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_X_L], table[CM730::P_ACCEL_X_H]));
+	while (cnt<NDATA) {
+		// reads a chunk of data into table to be formatted after
+		if(cm730.ReadTable(CM730::ID_CM, CM730::P_GYRO_Z_L, CM730::P_ACCEL_Z_H, table, 0) == CM730::SUCCESS)
+		{
+			// get the rigid body and markers
+			nmarker = owlGetMarkers(markers, 32);
+			nrigid = owlGetRigids(&rigid, 1);
 
-         // Phasespace
-         // Rigid body -- we have to set the rigid body from this end?
-         /*
-         int err;
+			// check for error
+			if ((err = owlGetError()) != OWL_NO_ERROR) {
+				owl_print_error("error", err);
+				return 0;
+			}
 
-         // get the rigid body markers
-         //  note: markers have to be read,
-         //  even if they are not used
-         int m = owlGetMarkers(markers, 32);
-         int o = owlGetCameras(cameras, 32);
-         int n = owlGetRigids(&rigid, 1);
+			// make sure we got a new frame
+			if( nrigid<1 )
+				continue;
 
-         // check for error
-         if ((err = owlGetError()) != OWL_NO_ERROR) {
-            owl_print_error("error", err);
-            break;
-         }
+			// save phasespace data
+			for( int j=0; j<7; j++ )
+				pose[cnt][j] = rigid.pose[j];
+			cond[cnt] = rigid.cond;
+			frame[cnt] = rigid.frame;
 
-         // no data yet
-         if (n == 0 || o == 0) continue;
+			// Darwin Time
+			clock_gettime(CLOCK_MONOTONIC, &interval);
+			time = diff_sec(start_time, interval);
 
-         if (n > 0) {
-            printf("%d rigid body, %d markers, %d cameras:\n", n, m, o);
-            if (rigid.cond > 0) {
-               float inv_pose[7];
-               copy_p(rigid.pose, inv_pose);
-               invert_p(inv_pose);
+			// Gyro and Accel
+			gyro[cnt][2] = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_Z_L], table[CM730::P_GYRO_Z_H]));
+			gyro[cnt][1] = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_Y_L], table[CM730::P_GYRO_Y_H]));
+			gyro[cnt][0] = gyro_radps(cm730.MakeWord(table[CM730::P_GYRO_X_L], table[CM730::P_GYRO_X_H]));
 
-               printf("\nRigid: ");
-               print_p(rigid.pose);
+			accel[cnt][2] = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_Z_L], table[CM730::P_ACCEL_Z_H]));
+			accel[cnt][1] = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_Y_L], table[CM730::P_ACCEL_Y_H]));
+			accel[cnt][0] = accel_ms2(cm730.MakeWord(table[CM730::P_ACCEL_X_L], table[CM730::P_ACCEL_X_H]));
 
-               printf("\nCameras: ");
-               for (int i = 0; i < o; i++) {
-                  // multiply each camera's pose by inverse of rigid pose
-                  float cam_pose[7];
-                  copy_p(cameras[i].pose, cam_pose);
-                  mult_pp(inv_pose, cam_pose, cameras[i].pose);
+			// advance counter, save time
+			tm[cnt] = time;
+			cnt++;
 
-                  print_p(cameras[i].pose);
-                  printf("\n");
-               }
-               printf("\n");
-            }
-            printf("\n");
-         }
-         */
+			// sleep: Darwin returns repeated data at higher rates
+			//	usleep(4000);
+		}
+	}
 
-         // Markers
-         int n = owlGetMarkers(markers, 32);
-         int err;
-         if ((err = owlGetError()) != OWL_NO_ERROR) {
-            owl_print_error("error", err);
-            break;
-         }
-
-         if (n > 0) {
-            for(int i = 0; i < MARKER_COUNT; i++) {
-               if(markers[i].cond > PHASESPACE_CONFIDENCE) {
-                  double x = markers[i].x/1000.0;
-                  double y = markers[i].y/1000.0;
-                  double z = markers[i].z/1000.0;
-               }
-            }
-            //printf("\t %d good markers", n);
-         }
-
-			// print
-			if (diff_sec(prev_int, interval) > 1.0) {
-            printf("TIME: %1.3f\tACCEL: %1.3f %1.3f %1.3f\tGRYO: %1.3f %1.3f %1.3f Markers %d\n",
-                  time, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, n);
-
-            clock_gettime(CLOCK_MONOTONIC, &prev_int);
-         }
-      }
-   }
-
-   return 0;
+	// save data to file
+	FILE* fp = fopen("data.txt", "wt");
+	for( cnt=0; cnt<NDATA; cnt++ )
+		fprintf(fp, "%d %f %d %f   %f %f %f   %f %f %f %f   %f %f %f  %f %f %f\n",
+				cnt, 1000.0*tm[cnt], frame[cnt], cond[cnt], 
+				pose[cnt][0], pose[cnt][1], pose[cnt][2],
+				pose[cnt][3], pose[cnt][4], pose[cnt][5], pose[cnt][6],
+				accel[cnt][0], accel[cnt][1], accel[cnt][2],
+				gyro[cnt][0], gyro[cnt][1], gyro[cnt][2]); 
+	fclose(fp);
+	return 0;
 }

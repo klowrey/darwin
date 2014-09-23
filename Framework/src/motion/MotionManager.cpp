@@ -163,6 +163,8 @@ void MotionManager::StartStreaming()
 			data_sock.set_non_blocking(true);
 			cout << "[Accepted..]" << endl;
 			m_IsStreaming = true;
+
+			clock_gettime(CLOCK_MONOTONIC,&start_time);
 		}
 	}
 	catch ( LinuxSocketException& e)
@@ -214,6 +216,8 @@ void MotionManager::StartLogging()
 
 	printf("Starting to Log\n");
 	m_IsLogging = true;
+
+	clock_gettime(CLOCK_MONOTONIC,&start_time);
 }
 
 bool MotionManager::IsLogging()

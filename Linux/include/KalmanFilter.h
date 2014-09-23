@@ -128,6 +128,44 @@ namespace eigenkf {
 				}
 
 		};
+	template<int dimension, class StateType>
+		class ExtendedProcess {
+			public:
+				typedef Eigen::Matrix<double, StateType::DIM, 1> VecState;
+				typedef Eigen::Matrix<double, StateType::DIM, StateType::DIM> MatStateState;
+
+				/// Noise per second, per component
+				VecState sigma;
+				MatStateState noise;
+				MatStateState jacobian;
+
+				inline ExtendedProcess() :
+					sigma(VecState::Zero()),
+					noise(MatStateState::Zero()),
+					jacobian(MatStateState::Identity())
+			{}
+
+				MatStateState const& getJacobian(StateType const& /*state*/, const double /*dt*/) {
+					/// No change over time due to process model
+					return jacobian;
+				}
+
+				void updateState(StateType & state, const double dt) {
+					// Linear process
+					state.x = jacobian * state.x;
+				}
+
+				// aka matrix Q
+				MatStateState const& getNoiseCovariance(const double dt) {
+					noise = (dt * sigma).asDiagonal();
+					return noise;
+				}
+
+				void updateFromMeasurement(StateType & state, VecState const & innovation) {
+					state.x += innovation;
+				}
+
+		};
 	template<class StateType>
 		class AbsoluteMeasurement {
 			public:
