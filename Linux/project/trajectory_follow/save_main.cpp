@@ -673,7 +673,9 @@ int main(int argc, char* argv[])
 
 				/// UNITS MAKING A BIG DIFFERENCE?
 				//MadgwickAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
-				out << dt_interp<<","<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
+				out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
+					<<accel_x<<","<<accel_y<<","<<accel_z<<","
+					<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
 
 				if (use_gains == false && sref_size >1) {
 					// get the sref instead of the uref
