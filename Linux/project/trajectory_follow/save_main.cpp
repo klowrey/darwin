@@ -60,14 +60,17 @@ void* walk_thread(void* ptr)
 	return NULL;
 }
 
-double twoKp = 0.8;
-double twoKi = 0.0;
+double twoKp = 2.0;
 double beta = 0.5;
+// q's in darwin frame, r rotates to traj frame
 double q0=1.0;
 double q1=0.0;
 double q2=0.0;
 double q3=0.0;
-
+double r0 = 0.6285;
+double r1 = 0.6261;
+double r2 = -0.3268;
+double r3 = 0.3257;
 void MadgwickAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
 	double recipNorm;
 	double s0, s1, s2, s3;
@@ -141,7 +144,6 @@ struct quat_s {
 
 void MahonyAHRSupdateIMU(quat_s *q, double gx, double gy, double gz, double ax, double ay, double az, double dt) {
 	double recipNorm;
-	double integralFBx=0.0, integralFBy=0.0, integralFBz=0.0;
 	double halfvx, halfvy, halfvz;
 	double halfex, halfey, halfez;
 	double qa, qb, qc;
@@ -162,21 +164,6 @@ void MahonyAHRSupdateIMU(quat_s *q, double gx, double gy, double gz, double ax, 
 	halfex = (ay * halfvz - az * halfvy);
 	halfey = (az * halfvx - ax * halfvz);
 	halfez = (ax * halfvy - ay * halfvx);
-
-	// Compute and apply integral feedback if enabled
-	if(twoKi > 0.0) {
-		integralFBx += twoKi * halfex * dt;	// integral error scaled by Ki
-		integralFBy += twoKi * halfey * dt;
-		integralFBz += twoKi * halfez * dt;
-		gx += integralFBx;	// apply inegral feedback
-		gy += integralFBy;
-		gz += integralFBz;
-	}
-	else {
-		integralFBx = 0.0;	// prevent integral windup
-		integralFBy = 0.0;
-		integralFBz = 0.0;
-	}
 
 	// Apply proportional feedback
 	gx += twoKp * halfex;
@@ -203,15 +190,11 @@ void MahonyAHRSupdateIMU(quat_s *q, double gx, double gy, double gz, double ax, 
 	q3 *= recipNorm;
 
 	// quat rotate to trajectory frame
-	static double r0 = 0.6285;
-	static double r1 = 0.6261;
-	static double r2 = -0.3268;
-	static double r3 = 0.3257;
-
 	q->q0 = q0*r0 - q1*r1 - q2*r2 - q3*r3;
 	q->q1 = q0*r1 + q1*r0 - q2*r3 + q3*r2;
 	q->q2 = q0*r2 + q1*r3 + q2*r0 - q3*r1;
 	q->q3 = q0*r3 - q1*r2 + q2*r1 + q3*r0;
+
 }
 
 void initial_pose(double* joints, CM730 * cm730) {
@@ -644,7 +627,7 @@ int main(int argc, char* argv[])
 					// 3 position, 4 quat
 					// sref 53
 					// 3 position, 4 quat, 3 vel, 3 ang_vel
-					
+
 					if (sref_size > 40) {
 						// zero out all sref error first
 						for (int i=40; i<sref_size; i++) {
