@@ -132,7 +132,14 @@ void MadgwickAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay
 	q3 *= recipNorm;
 }
 
-void MahonyAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
+struct quat_s {
+	double q0;
+	double q1;
+	double q2;
+	double q3;
+};
+
+void MahonyAHRSupdateIMU(quat_s *q, double gx, double gy, double gz, double ax, double ay, double az, double dt) {
 	double recipNorm;
 	double integralFBx=0.0, integralFBy=0.0, integralFBz=0.0;
 	double halfvx, halfvy, halfvz;
@@ -194,6 +201,17 @@ void MahonyAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay, 
 	q1 *= recipNorm;
 	q2 *= recipNorm;
 	q3 *= recipNorm;
+
+	// quat rotate to trajectory frame
+	r0 = 0.6285;
+	r1 = 0.6261;
+	r2 = -0.3268;
+	r3 = 0.3257;
+
+	q->q0 = q0*r0 - q1*r1 - q2*r2 - q3*r3;
+	q->q1 = q0*r1 + q1*r0 - q2*r3 + q3*r2;
+	q->q2 = q0*r2 + q1*r3 + q2*r0 - q3*r1;
+	q->q3 = q0*r3 - q1*r2 + q2*r1 + q3*r0;
 }
 
 void initial_pose(double* joints, CM730 * cm730) {
@@ -383,20 +401,22 @@ int main(int argc, char* argv[])
 	int d_gain;
 	int sref_size;
 	bool use_gains;
+	bool use_quat;
+	bool use_vel;
 	double dt;
 	std::string *filename = new std::string();
-	std::string *vel_file = new std::string();
 
 	try {
 		po::options_description desc("Allowed options");
 		desc.add_options()
 			("help", "Usage guide")
 			("engage,e", po::value<bool>(&engage)->default_value(false),
-			 "Engage motors for live run")
+			 "Engage motors for live run, or dry run of file.")
 			("trajectory,q", po::value<std::string>(filename)->required(), "Binary file of trajectory joint data")
-			("sref,s", po::value<int>(&sref_size)->default_value(0), "Number of data sets in binary file per timestep")
+			("sref,s", po::value<int>(&sref_size)->default_value(0), "Size of SREF vector; helps with data organization")
 			("gains,g", po::value<bool>(&use_gains)->default_value(false), "Use feedback gains if available")
-			("velocity,v", po::value<std::string>(vel_file), "Binary file of joint velocity data")
+			("quat", po::value<bool>(&use_quat)->default_value(false), "Use quat feedback gains if available")
+			("vels", po::value<bool>(&use_vel)->default_value(false), "Use vel feedback gains if available")
 			("dt,t", po::value<double>(&dt)->default_value(0.02),
 			 "Timestep in binary file -- checks for file corruption")
 			("p_gain,p", po::value<int>(&p_gain)->default_value(20), "P gain of PiD controller, 2-160")
@@ -426,7 +446,9 @@ int main(int argc, char* argv[])
 	printf("Engaging joints: %s\n", engage ? "true":"false");
 	printf("Reading trajectory from%s\n", filename->c_str());
 	printf("Size of SREF vector in file: %d\n", sref_size);
-	printf("Reading velocities from%s\n", vel_file->c_str());
+	printf("\tGain use: %s\n", use_gains ? "true":"false");
+	printf("\tQuat use: %s\n", use_quat ? "true":"false");
+	printf("\tVels use: %s\n", use_avel ? "true":"false");
 	printf("Timestep is set at %f\n", dt);
 	printf("P Gain is set at %d\n", p_gain);
 	printf("I Gain is set at %d\n", i_gain);
@@ -473,18 +495,6 @@ int main(int argc, char* argv[])
 		printf("Bad trajectory\n");
 		return 0;
 	}
-
-	/*
-		double* vel_line = NULL;
-		if (vel_file->empty() == false) {
-		vel_line = open_read_binary(vel_file->c_str(), LINE_SIZE);
-
-		if (vel_line == NULL) {
-		printf("Bad velocity file\n");
-		return 0;
-		}
-		}
-		*/
 
 	double* joint_data;
 	double* prev_joint;
@@ -549,6 +559,12 @@ int main(int argc, char* argv[])
 		MotionManager::GetInstance()->StartLogging();
 	}
 
+	quat_s quat;
+	quat.q0 = 0.6285;
+	quat.q1 = 0.6261;
+	quat.q2 = -0.3268;
+	quat.q3 = 0.3257;
+
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
 
@@ -562,21 +578,6 @@ int main(int argc, char* argv[])
 		if (abs(timestamp - binary_line[sample*LINE_SIZE]) < 10e-6) {
 
 			joint_data = &(binary_line[STRIDE]);
-
-			// can print out 20 joint datas
-			/*
-				printf("t: %1.3f; ", prev_joint[0]);
-				for (int joint=1; joint<20; joint++) {
-				printf("%1.3f ", prev_joint[joint]);
-				}
-				printf("\n");
-
-				printf("t: %1.3f; ", joint_data[0]);
-				for (int joint=1; joint<20; joint++) {
-				printf("%1.3f ", joint_data[joint]);
-				}
-				printf("\n");
-				*/
 
 			//printf("%f ??? %f\n", time_passed, timestamp);
 			while ( time_passed < timestamp) {
@@ -627,14 +628,46 @@ int main(int argc, char* argv[])
 
 					Map<VectorXd> sref(interp+1+20, sref_size); // better way of indexing this?
 
-					// TODO TEMP HACK FOR BAD MOTOR 20
-					//s_vec[19] = sref(19);
-					//s_vec[39] = sref(39);
+					double gyro_x = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
+					double gyro_y = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
+					double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
 
-					// TODO Temp hack for 0 error in root pos, root vel, etc etc
+					double accel_x = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
+					double accel_y = -1*accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
+					double accel_z = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
+
+					//printf("dt_interp: %f\n", dt_interp);
+
+					// sref 40
+					// no pose, orientation
+					// sref 47
+					// 3 position, 4 quat
+					// sref 53
+					// 3 position, 4 quat, 3 vel, 3 ang_vel
+					
 					if (sref_size > 40) {
+						// zero out all sref error first
 						for (int i=40; i<sref_size; i++) {
 							s_vec[i] = sref(i);
+						}
+						// apply appropriate data from sensors
+						if (use_quat == true && sref >= 47) {
+							MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
+							printf("%1.3f %1.3f %1.3f %1.3f\n",
+									quat.q0,
+									quat.q1,								
+									quat.q2,
+									quat.q3);
+							s_vec[43] = quat.q0;
+							s_vec[44] = quat.q1;
+							s_vec[45] = quat.q2;
+							s_vec[46] = quat.q3;
+						}
+						if (use_avel == true && sref >= 53) {
+							// TODO filter gyro before using this
+							s_vec[50] = gyro_x;
+							s_vec[51] = gyro_y;
+							s_vec[52] = gyro_z;
 						}
 					}
 
@@ -655,27 +688,9 @@ int main(int argc, char* argv[])
 					}
 				}
 
-				//double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
-				//double gyro_y = -1.0*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
-				//double gyro_x = -1.0*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
-
-				//double accel_z = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
-				//double accel_x = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
-				//double accel_y = -1.0*accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
-
 				/// UNITS MAKING A BIG DIFFERENCE?
-				double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
-				double gyro_y = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
-				double gyro_x = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
-
-				double accel_x = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
-				double accel_y = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
-				double accel_z = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
-
-				//printf("dt_interp: %f\n", dt_interp);
-				//MahonyAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 				//MadgwickAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
-				//out << time<<","<< q0<<","<< q1<<","<< q2<<","<< q3<<std::endl;
+				out << time<<","<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
 
 				if (use_gains == false && sref_size >1) {
 					// get the sref instead of the uref
