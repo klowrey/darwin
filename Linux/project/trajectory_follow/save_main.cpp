@@ -559,7 +559,7 @@ int main(int argc, char* argv[])
 		printf("%3.2f percent through the file.\n", ((double)sample/samples)*100.0);
 
 		// might not need to bother checking this...
-		if ((timestamp - binary_line[sample*LINE_SIZE]) < 10e-6) {
+		if (abs(timestamp - binary_line[sample*LINE_SIZE]) < 10e-6) {
 
 			joint_data = &(binary_line[STRIDE]);
 
@@ -601,13 +601,13 @@ int main(int argc, char* argv[])
 					//printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[joint], interp[joint], joint_data[joint]);
 				}
 
+				for (int idx=21; idx<LINE_SIZE; idx++) {
+					double diff = joint_data[idx] - prev_joint[idx];
+					interp[idx] = prev_joint[idx] + percent*diff;
+				}
 				if (sref_size > 1 && use_gains == true) {
 					// TODO probably not a good idea, but for now...
 					// Interpolate SREF & A matrix
-					for (int idx=21; idx<LINE_SIZE; idx++) {
-						double diff = joint_data[idx] - prev_joint[idx];
-						interp[idx] = prev_joint[idx] + percent*diff;
-					}
 
 					// (uref + du) + A * (s - sref)
 					int i = 0;
@@ -640,7 +640,7 @@ int main(int argc, char* argv[])
 
 					Map<VectorXd> s(s_vec, sref_size);
 
-					printf("Error sum: %f\n", (s-sref).sum());
+					//printf("Error sum: %f\n", (s-sref).sum());
 
 					Map<MatrixXd> A(interp+1+20+sref_size, 20, sref_size); // better way of indexing this?
 					//printf("A: %d rows, %d cols\n", A.rows(), A.cols());
@@ -677,7 +677,17 @@ int main(int argc, char* argv[])
 				//MadgwickAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 				//out << time<<","<< q0<<","<< q1<<","<< q2<<","<< q3<<std::endl;
 
-				set_positions(percent, interp);
+				if (use_gains == false && sref_size >1) {
+					// get the sref instead of the uref
+					double* sref = interp + 20; // remember that interp should have time at index 0
+					//for (int i=0;i<20;i++)
+					//	printf("%1.3f ", sref[i]);
+					//printf("\n");
+					set_positions(percent, sref);
+				}
+				else {
+					set_positions(percent, interp);
+				}
 
 				MotionManager::GetInstance()->Process(); // does the logging
 			}
