@@ -60,13 +60,13 @@ void* walk_thread(void* ptr)
 	return NULL;
 }
 
-double twoKp = 10.0;
+double twoKp = 0.8;
 double twoKi = 0.0;
 double beta = 0.5;
-double q0=0.65;
-double q1=-0.3;
-double q2=0.3;
-double q3=0.65;
+double q0=1.0;
+double q1=0.0;
+double q2=0.0;
+double q3=0.0;
 
 void MadgwickAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
 	double recipNorm;
@@ -203,10 +203,10 @@ void MahonyAHRSupdateIMU(quat_s *q, double gx, double gy, double gz, double ax, 
 	q3 *= recipNorm;
 
 	// quat rotate to trajectory frame
-	r0 = 0.6285;
-	r1 = 0.6261;
-	r2 = -0.3268;
-	r3 = 0.3257;
+	static double r0 = 0.6285;
+	static double r1 = 0.6261;
+	static double r2 = -0.3268;
+	static double r3 = 0.3257;
 
 	q->q0 = q0*r0 - q1*r1 - q2*r2 - q3*r3;
 	q->q1 = q0*r1 + q1*r0 - q2*r3 + q3*r2;
@@ -402,7 +402,7 @@ int main(int argc, char* argv[])
 	int sref_size;
 	bool use_gains;
 	bool use_quat;
-	bool use_vel;
+	bool use_avel;
 	double dt;
 	std::string *filename = new std::string();
 
@@ -416,7 +416,7 @@ int main(int argc, char* argv[])
 			("sref,s", po::value<int>(&sref_size)->default_value(0), "Size of SREF vector; helps with data organization")
 			("gains,g", po::value<bool>(&use_gains)->default_value(false), "Use feedback gains if available")
 			("quat", po::value<bool>(&use_quat)->default_value(false), "Use quat feedback gains if available")
-			("vels", po::value<bool>(&use_vel)->default_value(false), "Use vel feedback gains if available")
+			("vels", po::value<bool>(&use_avel)->default_value(false), "Use vel feedback gains if available")
 			("dt,t", po::value<double>(&dt)->default_value(0.02),
 			 "Timestep in binary file -- checks for file corruption")
 			("p_gain,p", po::value<int>(&p_gain)->default_value(20), "P gain of PiD controller, 2-160")
@@ -651,7 +651,7 @@ int main(int argc, char* argv[])
 							s_vec[i] = sref(i);
 						}
 						// apply appropriate data from sensors
-						if (use_quat == true && sref >= 47) {
+						if (use_quat == true && sref_size >= 47) {
 							MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 							printf("%1.3f %1.3f %1.3f %1.3f\n",
 									quat.q0,
@@ -663,7 +663,7 @@ int main(int argc, char* argv[])
 							s_vec[45] = quat.q2;
 							s_vec[46] = quat.q3;
 						}
-						if (use_avel == true && sref >= 53) {
+						if (use_avel == true && sref_size >= 53) {
 							// TODO filter gyro before using this
 							s_vec[50] = gyro_x;
 							s_vec[51] = gyro_y;
@@ -690,7 +690,7 @@ int main(int argc, char* argv[])
 
 				/// UNITS MAKING A BIG DIFFERENCE?
 				//MadgwickAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
-				out << time<<","<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
+				out << dt_interp<<","<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
 
 				if (use_gains == false && sref_size >1) {
 					// get the sref instead of the uref
