@@ -20,6 +20,24 @@
 
 #define U2D_DEV_NAME        "/dev/ttyUSB0"
 
+
+#define MARKER_COUNT 8
+#define PS_SERVER_NAME "128.208.4.127"
+#define INIT_FLAGS 0
+#define PHASESPACE_CONFIDENCE 1
+
+float RIGID_BODY[MARKER_COUNT][3] = {
+	{0.00, 0.00, 0.00},
+	{69.24, 3.39, -74.19}, 
+	{43.14, 19.77, 21.19},
+	{78.63, -101.10, 19.91}, 
+	{16.91, -7.61, -69.78},
+	{94.86, -37.21, 32.17},
+	{21.44, 2.66, -31.64},
+	{115.67, -49.50, -45.21} 
+};
+
+
 using namespace Robot;
 using namespace Eigen;
 namespace po = boost::program_options;
@@ -61,7 +79,6 @@ void* walk_thread(void* ptr)
 }
 
 double twoKp = 2.0;
-double beta = 0.5;
 // q's in darwin frame, r rotates to traj frame
 double q0=1.0;
 double q1=0.0;
@@ -71,69 +88,6 @@ double r0 = 0.6285;
 double r1 = 0.6261;
 double r2 = -0.3268;
 double r3 = 0.3257;
-void MadgwickAHRSupdateIMU(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
-	double recipNorm;
-	double s0, s1, s2, s3;
-	double qDot1, qDot2, qDot3, qDot4;
-	double _2q0, _2q1, _2q2, _2q3, _4q0, _4q1, _4q2 ,_8q1, _8q2, q0q0, q1q1, q2q2, q3q3;
-
-	// Rate of change of quaternion from gyroscope
-	qDot1 = 0.5 * (-q1 * gx - q2 * gy - q3 * gz);
-	qDot2 = 0.5 * (q0 * gx + q2 * gz - q3 * gy);
-	qDot3 = 0.5 * (q0 * gy - q1 * gz + q3 * gx);
-	qDot4 = 0.5 * (q0 * gz + q1 * gy - q2 * gx);
-
-	// Normalise accelerometer measurement
-	recipNorm = 1.0/sqrt(ax * ax + ay * ay + az * az);
-	ax *= recipNorm;
-	ay *= recipNorm;
-	az *= recipNorm;   
-
-	// Auxiliary variables to avoid repeated arithmetic
-	_2q0 = 2.0 * q0;
-	_2q1 = 2.0 * q1;
-	_2q2 = 2.0 * q2;
-	_2q3 = 2.0 * q3;
-	_4q0 = 4.0 * q0;
-	_4q1 = 4.0 * q1;
-	_4q2 = 4.0 * q2;
-	_8q1 = 8.0 * q1;
-	_8q2 = 8.0 * q2;
-	q0q0 = q0 * q0;
-	q1q1 = q1 * q1;
-	q2q2 = q2 * q2;
-	q3q3 = q3 * q3;
-
-	// Gradient decent algorithm corrective step
-	s0 = _4q0 * q2q2 + _2q2 * ax + _4q0 * q1q1 - _2q1 * ay;
-	s1 = _4q1 * q3q3 - _2q3 * ax + 4.0 * q0q0 * q1 - _2q0 * ay - _4q1 + _8q1 * q1q1 + _8q1 * q2q2 + _4q1 * az;
-	s2 = 4.0 * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 + _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
-	s3 = 4.0 * q1q1 * q3 - _2q1 * ax + 4.0 * q2q2 * q3 - _2q2 * ay;
-	recipNorm = 1.0/sqrt(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3); // normalise step magnitude
-	s0 *= recipNorm;
-	s1 *= recipNorm;
-	s2 *= recipNorm;
-	s3 *= recipNorm;
-
-	// Apply feedback step
-	qDot1 -= beta * s0;
-	qDot2 -= beta * s1;
-	qDot3 -= beta * s2;
-	qDot4 -= beta * s3;
-
-	// Integrate rate of change of quaternion to yield quaternion
-	q0 += qDot1 * dt;
-	q1 += qDot2 * dt;
-	q2 += qDot3 * dt;
-	q3 += qDot4 * dt;
-
-	// Normalise quaternion
-	recipNorm = 1.0/sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-	q0 *= recipNorm;
-	q1 *= recipNorm;
-	q2 *= recipNorm;
-	q3 *= recipNorm;
-}
 
 struct quat_s {
 	double q0;
@@ -376,6 +330,17 @@ void set_positions(double percent, double* interp) {
 	joint_num++;
 }
 
+void owl_print_error(const char *s, int n)
+{
+	if(n < 0) printf("%s: %d\n", s, n);
+	else if(n == OWL_NO_ERROR) printf("%s: No Error\n", s);
+	else if(n == OWL_INVALID_VALUE) printf("%s: Invalid Value\n", s);
+	else if(n == OWL_INVALID_ENUM) printf("%s: Invalid Enum\n", s);
+	else if(n == OWL_INVALID_OPERATION) printf("%s: Invalid Operation\n", s);
+	else printf("%s: 0x%x\n", s, n);
+}
+
+
 int main(int argc, char* argv[])
 {
 	bool engage;
@@ -469,6 +434,29 @@ int main(int argc, char* argv[])
 
 	printf("Press the ENTER key to begin!\n");
 	getchar();
+
+	// Init Phasespace Marker Tracking
+	OWLRigid rigid;
+	int tracker;
+	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
+		printf("Couldn't connect to Phase Space\n");
+		return 0;
+	}
+	// create tracker 0
+	tracker = 0;
+	owlTrackeri(tracker, OWL_CREATE, OWL_RIGID_TRACKER);
+	for (int i = 0; i < MARKER_COUNT; i++) {
+		owlMarkeri(MARKER(tracker, i), OWL_SET_LED, i);
+		owlMarkerfv(MARKER(tracker, i), OWL_SET_POSITION, RIGID_BODY[i]);
+	}
+	owlTracker(tracker, OWL_ENABLE);
+	if (!owlGetStatus()) {
+		owl_print_error("error in point tracker setup", owlGetError());
+		return 0;
+	}
+	owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
+	owlSetInteger(OWL_STREAMING, OWL_ENABLE);
+
 
 
 	// file stuff start
@@ -568,6 +556,24 @@ int main(int argc, char* argv[])
 				int joint_num = 0;
 				int value;
 				int id;
+
+				///////////////////////////////////////////////////////
+				// get the rigid body
+				nrigid = owlGetRigids(&rigid, 1);
+
+				// check for error
+				if ((err = owlGetError()) != OWL_NO_ERROR) {
+					owl_print_error("error", err);
+					return 0;
+				}
+
+				// make sure we got a new frame
+				if( nrigid<1 )
+					continue;
+				///////////////////////////////////////////////////////
+				//for( int j=0; j<7; j++ )
+				//	pose[cnt][j] = rigid.pose[j];
+
 
 				//double percent = 1.0 - ((joint_data[0]-prev_joint[0]) / (time_passed-prev_joint[0]));
 				double percent = ((time_passed-prev_joint[0]) / (joint_data[0]-prev_joint[0]));
@@ -687,9 +693,12 @@ int main(int argc, char* argv[])
 				else {
 					set_positions(percent, interp);
 
-					out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
-						<<accel_x<<","<<accel_y<<","<<accel_z<<","
+					out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
+						<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
+						<<rigid.pose[6]<<","
 						<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
+						//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
+						//<<accel_x<<","<<accel_y<<","<<accel_z<<","
 				}
 
 				MotionManager::GetInstance()->Process(); // does the logging
