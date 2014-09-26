@@ -589,6 +589,16 @@ int main(int argc, char* argv[])
 					double diff = joint_data[idx] - prev_joint[idx];
 					interp[idx] = prev_joint[idx] + percent*diff;
 				}
+
+				double gyro_x = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
+				double gyro_y = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
+				double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
+
+				double accel_x = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
+				double accel_y = -1*accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
+				double accel_z = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
+
+
 				if (sref_size > 1 && use_gains == true) {
 					// TODO probably not a good idea, but for now...
 					// Interpolate SREF & A matrix
@@ -610,14 +620,6 @@ int main(int argc, char* argv[])
 						s_vec[i++] = j_rpm2rads_ps(cm730.m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
 
 					Map<VectorXd> sref(interp+1+20, sref_size); // better way of indexing this?
-
-					double gyro_x = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
-					double gyro_y = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
-					double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
-
-					double accel_x = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
-					double accel_y = -1*accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
-					double accel_z = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
 
 					//printf("dt_interp: %f\n", dt_interp);
 
@@ -673,9 +675,6 @@ int main(int argc, char* argv[])
 
 				/// UNITS MAKING A BIG DIFFERENCE?
 				//MadgwickAHRSupdateIMU(gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
-				out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
-					<<accel_x<<","<<accel_y<<","<<accel_z<<","
-					<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
 
 				if (use_gains == false && sref_size >1) {
 					// get the sref instead of the uref
@@ -687,6 +686,10 @@ int main(int argc, char* argv[])
 				}
 				else {
 					set_positions(percent, interp);
+
+					out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
+						<<accel_x<<","<<accel_y<<","<<accel_z<<","
+						<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
 				}
 
 				MotionManager::GetInstance()->Process(); // does the logging
