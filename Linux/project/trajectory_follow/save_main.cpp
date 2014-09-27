@@ -56,14 +56,75 @@ int _getch()
 	return ch;
 }
 
+/*
 double accel_g(int accel) {
 	return ((accel-512) / 128.0); // in m/s^2
 }
 double gyro_radps(int gyro) {
 	return (gyro-512)*0.017453229251;
 }
+*/
 
 volatile bool ready = false;
+volatile bool quit_ps= false;
+
+void owl_print_error(const char *s, int n)
+{
+	if(n < 0) printf("%s: %d\n", s, n);
+	else if(n == OWL_NO_ERROR) printf("%s: No Error\n", s);
+	else if(n == OWL_INVALID_VALUE) printf("%s: Invalid Value\n", s);
+	else if(n == OWL_INVALID_ENUM) printf("%s: Invalid Enum\n", s);
+	else if(n == OWL_INVALID_OPERATION) printf("%s: Invalid Operation\n", s);
+	else printf("%s: 0x%x\n", s, n);
+}
+
+void* ps_thread(void* ptr)
+{
+	// Init Phasespace Marker Tracking
+	OWLRigid rigid;
+	int tracker;
+	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
+		printf("Couldn't connect to Phase Space\n");
+		return 0;
+	}
+	// create tracker 0
+	tracker = 0;
+	owlTrackeri(tracker, OWL_CREATE, OWL_RIGID_TRACKER);
+	for (int i = 0; i < MARKER_COUNT; i++) {
+		owlMarkeri(MARKER(tracker, i), OWL_SET_LED, i);
+		owlMarkerfv(MARKER(tracker, i), OWL_SET_POSITION, RIGID_BODY[i]);
+	}
+	owlTracker(tracker, OWL_ENABLE);
+	if (!owlGetStatus()) {
+		owl_print_error("error in point tracker setup", owlGetError());
+		return 0;
+	}
+	owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
+	owlSetInteger(OWL_STREAMING, OWL_ENABLE);
+
+	std::ofstream out("TEST.txt");
+	while (quit_ps == false) {
+		int nrigid = owlGetRigids(&rigid, 1);
+
+		// check for error
+		int err;
+		if ((err = owlGetError()) != OWL_NO_ERROR) {
+			owl_print_error("error", err);
+			return 0;
+		}
+
+		// make sure we got a new frame
+		if( nrigid<1 )
+			continue;
+
+				out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
+					<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
+					<<rigid.pose[6]<<std::endl;
+		usleep(500);
+	}
+
+	owlDone();
+}
 
 void* walk_thread(void* ptr)
 {
@@ -77,6 +138,7 @@ void* walk_thread(void* ptr)
 	}
 	return NULL;
 }
+
 
 double twoKp = 2.0;
 // q's in darwin frame, r rotates to traj frame
@@ -330,15 +392,7 @@ void set_positions(double percent, double* interp) {
 	joint_num++;
 }
 
-void owl_print_error(const char *s, int n)
-{
-	if(n < 0) printf("%s: %d\n", s, n);
-	else if(n == OWL_NO_ERROR) printf("%s: No Error\n", s);
-	else if(n == OWL_INVALID_VALUE) printf("%s: Invalid Value\n", s);
-	else if(n == OWL_INVALID_ENUM) printf("%s: Invalid Enum\n", s);
-	else if(n == OWL_INVALID_OPERATION) printf("%s: Invalid Operation\n", s);
-	else printf("%s: 0x%x\n", s, n);
-}
+
 
 
 int main(int argc, char* argv[])
@@ -351,6 +405,7 @@ int main(int argc, char* argv[])
 	bool use_gains;
 	bool use_quat;
 	bool use_avel;
+	bool use_ps;
 	double dt;
 	std::string *filename = new std::string();
 
@@ -365,11 +420,13 @@ int main(int argc, char* argv[])
 			("gains,g", po::value<bool>(&use_gains)->default_value(false), "Use feedback gains if available")
 			("quat", po::value<bool>(&use_quat)->default_value(false), "Use quat feedback gains if available")
 			("vels", po::value<bool>(&use_avel)->default_value(false), "Use vel feedback gains if available")
+			("ps", po::value<bool>(&use_ps)->default_value(false), "Use phasespace. Remember to turn it on")
 			("dt,t", po::value<double>(&dt)->default_value(0.02),
 			 "Timestep in binary file -- checks for file corruption")
 			("p_gain,p", po::value<int>(&p_gain)->default_value(20), "P gain of PiD controller, 2-160")
 			("i_gain,i", po::value<int>(&i_gain)->default_value(0), "I gain of PiD controller, 0-32")
 			("d_gain,d", po::value<int>(&d_gain)->default_value(0), "D gain of PiD controller, 0-32")
+
 			;
 
 		po::variables_map vm;
@@ -435,29 +492,6 @@ int main(int argc, char* argv[])
 	printf("Press the ENTER key to begin!\n");
 	getchar();
 
-	// Init Phasespace Marker Tracking
-	OWLRigid rigid;
-	int tracker;
-	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
-		printf("Couldn't connect to Phase Space\n");
-		return 0;
-	}
-	// create tracker 0
-	tracker = 0;
-	owlTrackeri(tracker, OWL_CREATE, OWL_RIGID_TRACKER);
-	for (int i = 0; i < MARKER_COUNT; i++) {
-		owlMarkeri(MARKER(tracker, i), OWL_SET_LED, i);
-		owlMarkerfv(MARKER(tracker, i), OWL_SET_POSITION, RIGID_BODY[i]);
-	}
-	owlTracker(tracker, OWL_ENABLE);
-	if (!owlGetStatus()) {
-		owl_print_error("error in point tracker setup", owlGetError());
-		return 0;
-	}
-	owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
-	owlSetInteger(OWL_STREAMING, OWL_ENABLE);
-
-
 
 	// file stuff start
 	double* binary_line = open_read_binary(filename->c_str(), LINE_SIZE);
@@ -520,23 +554,14 @@ int main(int argc, char* argv[])
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
 
+	pthread_t phasespace_t;
+	if (use_ps) {
+		pthread_create(&phasespace_t, NULL, ps_thread, NULL);
+	}
+
 	while (!ready)
 	{
 		MotionManager::GetInstance()->Process();
-		int nrigid = owlGetRigids(&rigid, 1);
-
-		// check for error
-		int err;
-		if ((err = owlGetError()) != OWL_NO_ERROR) {
-			owl_print_error("error", err);
-			return 0;
-		}
-
-		// make sure we got a new frame
-		if( nrigid<1 )
-			continue;
-
-		usleep(4000);
 
 	}
 
@@ -555,7 +580,7 @@ int main(int argc, char* argv[])
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	clock_gettime(CLOCK_MONOTONIC, &end_time);
 
-	std::ofstream out("TEST.txt");
+	//std::ofstream out("TEST.txt");
 
 	// there is still data in the buffer
 	for (int sample = 1; sample<samples; sample++) {
@@ -575,18 +600,6 @@ int main(int argc, char* argv[])
 
 				///////////////////////////////////////////////////////
 				// get the rigid body
-				int nrigid = owlGetRigids(&rigid, 1);
-
-				// check for error
-				int err;
-				if ((err = owlGetError()) != OWL_NO_ERROR) {
-					owl_print_error("error", err);
-					return 0;
-				}
-
-				// make sure we got a new frame
-				if( nrigid<1 )
-					continue;
 				///////////////////////////////////////////////////////
 				//for( int j=0; j<7; j++ )
 				//	pose[cnt][j] = rigid.pose[j];
@@ -617,9 +630,9 @@ int main(int argc, char* argv[])
 				double gyro_y = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
 				double gyro_z = gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L));
 
-				double accel_x = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
-				double accel_y = -1*accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
-				double accel_z = accel_g(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
+				double accel_x = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L));
+				double accel_y = -1*accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
+				double accel_z = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
 
 
 				if (sref_size > 1 && use_gains == true) {
@@ -653,7 +666,7 @@ int main(int argc, char* argv[])
 					// sref 53
 					// 3 position, 4 quat, 3 vel, 3 ang_vel
 
-							MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
+					MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 					if (sref_size > 40) {
 						// zero out all sref error first
 						for (int i=40; i<sref_size; i++) {
@@ -662,11 +675,6 @@ int main(int argc, char* argv[])
 						// apply appropriate data from sensors
 						if (use_quat == true && sref_size >= 47) {
 							//MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
-							//printf("%1.3f %1.3f %1.3f %1.3f\n",
-							//		quat.q0,
-							//		quat.q1,								
-							//		quat.q2,
-							//		quat.q3);
 							s_vec[43] = quat.q0;
 							s_vec[44] = quat.q1;
 							s_vec[45] = quat.q2;
@@ -710,10 +718,12 @@ int main(int argc, char* argv[])
 
 				}
 
+				/*
 				out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
 					<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
 					<<rigid.pose[6]<<","
 					<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
+					*/
 				//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
 				//<<accel_x<<","<<accel_y<<","<<accel_z<<","
 
@@ -734,6 +744,11 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	if (use_ps) { 
+		quit_ps = true;
+		pthread_join(phasespace_t, NULL);
+	}
+
 
 	clock_gettime(CLOCK_MONOTONIC, &final_time);
 	printf("Trajectory took %f seconds\n", sec_diff(start_time, final_time));
@@ -741,13 +756,13 @@ int main(int argc, char* argv[])
 	printf("Streaming Started. Press SPACE to play trajectory\n");
 
 	//pthread_t thread_t;
-	pthread_create(&thread_t, NULL, walk_thread, NULL);
+	//pthread_create(&thread_t, NULL, walk_thread, NULL);
 
-	while (!ready)
-	{
-		MotionManager::GetInstance()->Process();
-	}
-	pthread_join(thread_t, NULL);
+	//while (!ready)
+	//{
+	//	MotionManager::GetInstance()->Process();
+	//}
+	//pthread_join(thread_t, NULL);
 
 
 	if (MotionManager::GetInstance()->IsLogging() == true) {
