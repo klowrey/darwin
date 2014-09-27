@@ -20,21 +20,21 @@
 
 #define U2D_DEV_NAME        "/dev/ttyUSB0"
 
-
+#include "owl.h"
 #define MARKER_COUNT 8
 #define PS_SERVER_NAME "128.208.4.127"
 #define INIT_FLAGS 0
 #define PHASESPACE_CONFIDENCE 1
 
 float RIGID_BODY[MARKER_COUNT][3] = {
-	{0.00, 0.00, 0.00},
-	{69.24, 3.39, -74.19}, 
-	{43.14, 19.77, 21.19},
-	{78.63, -101.10, 19.91}, 
-	{16.91, -7.61, -69.78},
-	{94.86, -37.21, 32.17},
-	{21.44, 2.66, -31.64},
-	{115.67, -49.50, -45.21} 
+	{00.00, 0.00, 0.00}, 
+	{48.22, 11.49, 51.58}, 
+	{97.48, -44.94, 21.19},
+	{-7.28, -32.28, 68.49}, 
+	{28.26, 6.30, -64.73}, 
+	{-27.31, -37.49, -51.00}, 
+	{84.31, -41.45, -51.53}, 
+	{86.56, -86.03, -12.11} 
 };
 
 
@@ -523,7 +523,23 @@ int main(int argc, char* argv[])
 	while (!ready)
 	{
 		MotionManager::GetInstance()->Process();
+		int nrigid = owlGetRigids(&rigid, 1);
+
+		// check for error
+		int err;
+		if ((err = owlGetError()) != OWL_NO_ERROR) {
+			owl_print_error("error", err);
+			return 0;
+		}
+
+		// make sure we got a new frame
+		if( nrigid<1 )
+			continue;
+
+		usleep(4000);
+
 	}
+
 	pthread_join(thread_t, NULL);
 
 	if (MotionManager::GetInstance()->IsLogging() == false) {
@@ -559,9 +575,10 @@ int main(int argc, char* argv[])
 
 				///////////////////////////////////////////////////////
 				// get the rigid body
-				nrigid = owlGetRigids(&rigid, 1);
+				int nrigid = owlGetRigids(&rigid, 1);
 
 				// check for error
+				int err;
 				if ((err = owlGetError()) != OWL_NO_ERROR) {
 					owl_print_error("error", err);
 					return 0;
@@ -636,6 +653,7 @@ int main(int argc, char* argv[])
 					// sref 53
 					// 3 position, 4 quat, 3 vel, 3 ang_vel
 
+							MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 					if (sref_size > 40) {
 						// zero out all sref error first
 						for (int i=40; i<sref_size; i++) {
@@ -643,12 +661,12 @@ int main(int argc, char* argv[])
 						}
 						// apply appropriate data from sensors
 						if (use_quat == true && sref_size >= 47) {
-							MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
-							printf("%1.3f %1.3f %1.3f %1.3f\n",
-									quat.q0,
-									quat.q1,								
-									quat.q2,
-									quat.q3);
+							//MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
+							//printf("%1.3f %1.3f %1.3f %1.3f\n",
+							//		quat.q0,
+							//		quat.q1,								
+							//		quat.q2,
+							//		quat.q3);
 							s_vec[43] = quat.q0;
 							s_vec[44] = quat.q1;
 							s_vec[45] = quat.q2;
@@ -685,21 +703,20 @@ int main(int argc, char* argv[])
 				if (use_gains == false && sref_size >1) {
 					// get the sref instead of the uref
 					double* sref = interp + 20; // remember that interp should have time at index 0
-					//for (int i=0;i<20;i++)
-					//	printf("%1.3f ", sref[i]);
-					//printf("\n");
 					set_positions(percent, sref);
 				}
 				else {
 					set_positions(percent, interp);
 
-					out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
-						<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
-						<<rigid.pose[6]<<","
-						<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
-						//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
-						//<<accel_x<<","<<accel_y<<","<<accel_z<<","
 				}
+
+				out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
+					<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
+					<<rigid.pose[6]<<","
+					<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
+				//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
+				//<<accel_x<<","<<accel_y<<","<<accel_z<<","
+
 
 				MotionManager::GetInstance()->Process(); // does the logging
 			}
