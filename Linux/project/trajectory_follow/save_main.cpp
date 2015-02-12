@@ -20,7 +20,7 @@
 
 #define U2D_DEV_NAME        "/dev/ttyUSB0"
 
-#include "owl.h"
+#include "phasespace/include/owl.h"
 #define MARKER_COUNT 8
 #define PS_SERVER_NAME "128.208.4.127"
 #define INIT_FLAGS 0

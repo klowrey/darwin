@@ -9,12 +9,13 @@
 
 TARGET = follower 
 
-INCLUDE_DIRS = -I../../include -I../../../Framework/include -I/usr/include/boost -I/usr/include/eigen3
+INCLUDE_DIRS = -I../../include -I../../../Framework/include -I./phasespace/include -I/usr/include/boost -I/usr/include/eigen3
 
 CXX = g++
 CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
 #CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
-LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -lowlsock
+LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -L./phasespace/lib -lowlsock
+#LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options
 
 OBJECTS =   main.o 
 

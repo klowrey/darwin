@@ -83,6 +83,7 @@ bool LinuxCM730::OpenPort()
 
 	serinfo.flags &= ~ASYNC_SPD_MASK;
 	serinfo.flags |= ASYNC_SPD_CUST;
+	serinfo.flags |= ASYNC_LOW_LATENCY;
 	serinfo.custom_divisor = serinfo.baud_base / baudrate;
 
 	if(ioctl(m_Socket_fd, TIOCSSERIAL, &serinfo) < 0)
