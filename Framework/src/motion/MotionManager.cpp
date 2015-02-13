@@ -484,6 +484,7 @@ void MotionManager::Process()
 
 		if(joint_num > 0) {
 			m_CM730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
+			printf("ID[%d] : gain %d, %d %d \n", param[13*MX28::PARAM_BYTES], MotionStatus::m_CurrentJoints.GetPGain(14), param[13*MX28::PARAM_BYTES+5], joint_num);
 		}
 	}
 
@@ -586,7 +587,9 @@ void MotionManager::Process()
 		}
 		for(int id = 19; id <= 20; id++) { // Head Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
-		} 
+		}
+		printf("\tAgain: %d %d\n", m_CM730->m_BulkReadData[14].ReadWord(MX28::P_P_GAIN),
+				m_CM730->m_BulkReadData[14].ReadWord(MX28::P_PRESENT_POSITION_L));
 
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));

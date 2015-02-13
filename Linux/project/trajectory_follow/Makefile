@@ -9,17 +9,18 @@
 
 TARGET = follower 
 
-INCLUDE_DIRS = -I../../include -I../../../Framework/include -I./phasespace/include -I/usr/include/boost -I/usr/include/eigen3
+INCLUDE_DIRS = -I../../include -I../../../Framework/include -I../../../SDK/phasespace/include -I/usr/include/boost -I/usr/include/eigen3
 
 CXX = g++
-CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
-#CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
-LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -L./phasespace/lib -lowlsock
+#CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
+#CXXFLAGS += -O0 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
+CXXFLAGS += -O2 -DLINUX -Wall $(INCLUDE_DIRS)
+LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -L../../../SDK/phasespace/lib -lowlsock
 #LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options
 
 OBJECTS =   main.o 
 
-all: $(TARGET) logger 
+all: $(TARGET) logger test
 
 clean:
 	rm -f *.a *.o $(TARGET) core *~ *.so *.lo
@@ -40,8 +41,12 @@ logger: darwin.a save_main.o
 	$(CXX) $(CFLAGS) save_main.o ../../lib/darwin.a -o logger $(LFLAGS)
 	chmod 755 logger 
 
+test: darwin.a test_main.o 
+	$(CXX) $(CFLAGS) test_main.o ../../lib/darwin.a -o test $(LFLAGS)
+	chmod 755 test 
+
 ps_logger: darwin.a ps_main.o 
-	$(CXX) $(CFLAGS) save_main.o ../../lib/darwin.a -o ps_logger $(LFLAGS)
+	$(CXX) $(CFLAGS) ps_main.o ../../lib/darwin.a -o ps_logger $(LFLAGS)
 	chmod 755 ps_logger 
 
 # useful to make a backup "make tgz"

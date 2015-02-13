@@ -562,6 +562,7 @@ int main(int argc, char* argv[])
 					interp[joint] = prev_joint[joint] + percent*diff;
 					//printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[joint], interp[joint], joint_data[joint]);
 				}
+				printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[], interp[joint], joint_data[joint]);
 
 				if (data_sets > 3 && use_gains == true) {
 					// TODO probably not a good idea, but for now...

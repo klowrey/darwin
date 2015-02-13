@@ -124,6 +124,8 @@ void* ps_thread(void* ptr)
 	}
 
 	owlDone();
+	
+	return 0;
 }
 
 void* walk_thread(void* ptr)
@@ -390,6 +392,8 @@ void set_positions(double percent, double* interp) {
 	MotionStatus::m_CurrentJoints.SetValue(id, radian2joint(interp[id]));
 	MotionStatus::m_CurrentJoints.SetEnable(id, true);
 	joint_num++;
+
+	printf("Joint: [14] %f\n", interp[14]);
 }
 
 
@@ -487,7 +491,7 @@ int main(int argc, char* argv[])
 	//motion_timer->Start();
 	/////////////////////////////////////////////////////////////////////
 
-	int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
+	//int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
 
 	printf("Press the ENTER key to begin!\n");
 	getchar();
@@ -535,7 +539,7 @@ int main(int argc, char* argv[])
 		MotionManager::GetInstance()->SetEnable(true);
 	}
 
-	int max_speed = 1024;
+	int max_speed = 1023;
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
 		cm730.WriteByte(joint, MX28::P_I_GAIN, i_gain, 0);
@@ -554,11 +558,12 @@ int main(int argc, char* argv[])
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
 
-	pthread_t phasespace_t;
-	if (use_ps) {
-		pthread_create(&phasespace_t, NULL, ps_thread, NULL);
-	}
+	//pthread_t phasespace_t;
+	//if (use_ps) {
+	//	pthread_create(&phasespace_t, NULL, ps_thread, NULL);
+	//}
 
+	ready = false;
 	while (!ready)
 	{
 		MotionManager::GetInstance()->Process();
@@ -625,6 +630,7 @@ int main(int argc, char* argv[])
 					double diff = joint_data[idx] - prev_joint[idx];
 					interp[idx] = prev_joint[idx] + percent*diff;
 				}
+				printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[14], interp[14], joint_data[14]);
 
 				double gyro_x = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
 				double gyro_y = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
@@ -666,8 +672,8 @@ int main(int argc, char* argv[])
 					// sref 53
 					// 3 position, 4 quat, 3 vel, 3 ang_vel
 
-					MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 					if (sref_size > 40) {
+						MahonyAHRSupdateIMU(&quat, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, dt_interp);
 						// zero out all sref error first
 						for (int i=40; i<sref_size; i++) {
 							s_vec[i] = sref(i);
@@ -715,7 +721,6 @@ int main(int argc, char* argv[])
 				}
 				else {
 					set_positions(percent, interp);
-
 				}
 
 				/*
@@ -726,6 +731,8 @@ int main(int argc, char* argv[])
 					*/
 				//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
 				//<<accel_x<<","<<accel_y<<","<<accel_z<<","
+				
+				if (cm730.BulkRead() == CM730::SUCCESS) { }
 
 
 				MotionManager::GetInstance()->Process(); // does the logging
@@ -746,7 +753,7 @@ int main(int argc, char* argv[])
 
 	if (use_ps) { 
 		quit_ps = true;
-		pthread_join(phasespace_t, NULL);
+		//pthread_join(phasespace_t, NULL);
 	}
 
 
