@@ -656,11 +656,11 @@ void Write(Robot::CM730 *cm730, int id, int addr, int value)
 	}
 
 	/*
-		if(id == CM730::ID_CM && addr == MX28::P_BAUD_RATE) {
-		printf("Attempting to change CM730's Baud Rate\n");
-		cm730->ChangeBaud(value);
-		}
-		*/
+	   if(id == CM730::ID_CM && addr == MX28::P_BAUD_RATE) {
+	   printf("Attempting to change CM730's Baud Rate\n");
+	   cm730->ChangeBaud(value);
+	   }
+	   */
 
 	if(res != CM730::SUCCESS)
 	{

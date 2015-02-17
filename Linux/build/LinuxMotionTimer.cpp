@@ -65,7 +65,6 @@ void LinuxMotionTimer::Start(void)
         exit(-1);
 
     this->m_TimerRunning=true;
-
 }
 
 void LinuxMotionTimer::Stop(void)

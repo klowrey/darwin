@@ -28,7 +28,7 @@ namespace Robot
 
     public:
       LinuxMotionTimer(MotionManager* manager);
-      ~LinuxMotionTimer();
+	  ~LinuxMotionTimer();
 
       void Start();
       void Stop();

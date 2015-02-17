@@ -36,6 +36,10 @@ namespace Robot
 
 		static int BUTTON;
 		static int FALLEN;
+
+		// Phasespace Data
+		static bool PHASESPACE_ON;
+		static double PS_DATA[7];
 	};
 }
 

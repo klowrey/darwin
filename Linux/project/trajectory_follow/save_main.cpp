@@ -14,29 +14,13 @@
 #include "LinuxDARwIn.h"
 #include "MPCData.h"
 
+#include "Phasespace.h"
+
 #include <Eigen/Dense>
 
 #include <boost/program_options.hpp>
 
 #define U2D_DEV_NAME        "/dev/ttyUSB0"
-
-#include "phasespace/include/owl.h"
-#define MARKER_COUNT 8
-#define PS_SERVER_NAME "128.208.4.127"
-#define INIT_FLAGS 0
-#define PHASESPACE_CONFIDENCE 1
-
-float RIGID_BODY[MARKER_COUNT][3] = {
-	{00.00, 0.00, 0.00}, 
-	{48.22, 11.49, 51.58}, 
-	{97.48, -44.94, 21.19},
-	{-7.28, -32.28, 68.49}, 
-	{28.26, 6.30, -64.73}, 
-	{-27.31, -37.49, -51.00}, 
-	{84.31, -41.45, -51.53}, 
-	{86.56, -86.03, -12.11} 
-};
-
 
 using namespace Robot;
 using namespace Eigen;
@@ -66,8 +50,9 @@ double gyro_radps(int gyro) {
 */
 
 volatile bool ready = false;
-volatile bool quit_ps= false;
+//volatile bool quit_ps= false;
 
+/*
 void owl_print_error(const char *s, int n)
 {
 	if(n < 0) printf("%s: %d\n", s, n);
@@ -127,6 +112,7 @@ void* ps_thread(void* ptr)
 	
 	return 0;
 }
+*/
 
 void* walk_thread(void* ptr)
 {
@@ -487,6 +473,7 @@ int main(int argc, char* argv[])
 
 	//MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
 	//MotionManager::GetInstance()->AddModule((MotionModule*)Walking::GetInstance());
+	MotionManager::GetInstance()->AddModule((MotionModule*)Phasespace::GetInstance());
 	//LinuxMotionTimer *motion_timer = new LinuxMotionTimer(MotionManager::GetInstance());
 	//motion_timer->Start();
 	/////////////////////////////////////////////////////////////////////
@@ -640,6 +627,9 @@ int main(int argc, char* argv[])
 				double accel_y = -1*accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L));
 				double accel_z = accel2ms2(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L));
 
+				// Should be root data...
+				// TODO
+				MotionStatus::PS_DATA[0];
 
 				if (sref_size > 1 && use_gains == true) {
 					// TODO probably not a good idea, but for now...
@@ -732,10 +722,9 @@ int main(int argc, char* argv[])
 				//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
 				//<<accel_x<<","<<accel_y<<","<<accel_z<<","
 				
-				if (cm730.BulkRead() == CM730::SUCCESS) { }
+				//if (cm730.BulkRead() == CM730::SUCCESS) { }
 
-
-				MotionManager::GetInstance()->Process(); // does the logging
+				MotionManager::GetInstance()->Process(); // does the logging, and bulk read, and grabbing phasespace
 			}
 
 			//print_status(&cm730);
@@ -751,11 +740,15 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	/*
 	if (use_ps) { 
 		quit_ps = true;
 		//pthread_join(phasespace_t, NULL);
 	}
-
+	*/
+	
+	// Must remove Phasespace to stop the separate thread
+	MotionManager::GetInstance()->RemoveModule((MotionModule*)Phasespace::GetInstance());
 
 	clock_gettime(CLOCK_MONOTONIC, &final_time);
 	printf("Trajectory took %f seconds\n", sec_diff(start_time, final_time));

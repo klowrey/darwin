@@ -484,7 +484,7 @@ void MotionManager::Process()
 
 		if(joint_num > 0) {
 			m_CM730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
-			printf("ID[%d] : gain %d, %d %d \n", param[13*MX28::PARAM_BYTES], MotionStatus::m_CurrentJoints.GetPGain(14), param[13*MX28::PARAM_BYTES+5], joint_num);
+			//printf("ID[%d] : gain %d, %d %d \n", param[13*MX28::PARAM_BYTES], MotionStatus::m_CurrentJoints.GetPGain(14), param[13*MX28::PARAM_BYTES+5], joint_num);
 		}
 	}
 
@@ -543,6 +543,14 @@ void MotionManager::Process()
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L)));
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)));
 
+		/*
+		if (MotionStatus::PHASESPACE_ON) {
+			for(int id = 0; id < 7; id++) { // Phasespace
+				m_streamBuffer.push_back(MotionStatus::PS_DATA[id]);
+			}
+		}
+		*/
+
 		if (data_sock.valid())
 		{
 			try {
@@ -588,8 +596,8 @@ void MotionManager::Process()
 		for(int id = 19; id <= 20; id++) { // Head Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 		}
-		printf("\tAgain: %d %d\n", m_CM730->m_BulkReadData[14].ReadWord(MX28::P_P_GAIN),
-				m_CM730->m_BulkReadData[14].ReadWord(MX28::P_PRESENT_POSITION_L));
+		//printf("\tAgain: %d %d\n", m_CM730->m_BulkReadData[14].ReadWord(MX28::P_P_GAIN),
+		//		m_CM730->m_BulkReadData[14].ReadWord(MX28::P_PRESENT_POSITION_L));
 
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
@@ -618,6 +626,14 @@ void MotionManager::Process()
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR2_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR3_L));
 		m_logBuffer.push_back(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR4_L));
+
+		if (MotionStatus::PHASESPACE_ON) {
+			for(int id = 0; id < 7; id++) { // Phasespace
+				// above Process() call puts the newest phasespace data into
+				// PS_DATA in MotionStatus
+				m_logBuffer.push_back(MotionStatus::PS_DATA[id]);
+			}
+		}
 
 		// Original
 		//m_LogFileStream << m_CM730->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L) << ",";
