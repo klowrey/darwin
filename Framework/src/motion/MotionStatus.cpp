@@ -19,6 +19,6 @@ int MotionStatus::BUTTON(0);
 int MotionStatus::FALLEN(0);
 
 // Phasespace Data
-bool PHASESPACE_ON = false;
-double MotionStatus::PS_DATA = [0,0,0,0,0,0,0];
+bool MotionStatus::PHASESPACE_ON = false;
+double MotionStatus::PS_DATA[7]={0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 

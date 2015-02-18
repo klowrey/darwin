@@ -3,9 +3,11 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include "MX28.h"
 //#include "Kinematics.h"
 #include "MotionStatus.h"
+#include <cstring>
 #include "Phasespace.h"
 
 using namespace Robot;
@@ -61,7 +63,7 @@ Phasespace::Phasespace()
 	if((error = pthread_create(&this->m_Thread, NULL, this->PhasespaceProc, this))!= 0)
 		exit(-1);
 
-	std::memset(pose, 0, sizeof(float)*POSE_SIZE);
+	std::memset(this->pose, 0, sizeof(float)*POSE_SIZE);
 	this->m_Initialized=false;
 	this->m_TrackerRunning=true;
 	MotionStatus::PHASESPACE_ON = true;
@@ -69,8 +71,10 @@ Phasespace::Phasespace()
 
 Phasespace::~Phasespace()
 {
+	int error;
 	if(this->m_TrackerRunning)
 	{
+		printf("Removing Phasespace Module\n");
 		this->m_FinishTracking = true;
 		// wait for the thread to end
 		if((error = pthread_join(this->m_Thread, NULL))!= 0)
@@ -95,6 +99,8 @@ void Phasespace::owl_print_error(const char *s, int n)
 void* Phasespace::PhasespaceProc(void* param)
 {
 	// Init Phasespace Marker Tracking
+	Phasespace *track = (Phasespace *)param;
+
 	OWLRigid rigid;
 	int tracker;
 	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
@@ -110,22 +116,30 @@ void* Phasespace::PhasespaceProc(void* param)
 	}
 	owlTracker(tracker, OWL_ENABLE);
 	if (!owlGetStatus()) {
-		owl_print_error("error in point tracker setup", owlGetError());
+		track->owl_print_error("error in point tracker setup", owlGetError());
 		return 0;
 	}
 	owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
 	owlSetInteger(OWL_STREAMING, OWL_ENABLE);
 
-	std::ofstream out("TEST.txt");
-	Phasespace *tracker = (Phasespace *)param;
+	/*
+	rigid.pose[0]=0;
+	rigid.pose[1]=1;
+	rigid.pose[2]=2;
+	rigid.pose[3]=3;
+	rigid.pose[4]=4;
+	rigid.pose[5]=5;
+	rigid.pose[6]=6;
+	*/
 
-	while (!tracker>m_FinishTracking) {
+	int count=0;
+	while (!track->m_FinishTracking) {
 		int nrigid = owlGetRigids(&rigid, 1);
 
 		// check for error
 		int err;
 		if ((err = owlGetError()) != OWL_NO_ERROR) {
-			owl_print_error("error", err);
+			track->owl_print_error("error", err);
 			return 0;
 		}
 
@@ -141,14 +155,16 @@ void* Phasespace::PhasespaceProc(void* param)
 		//frame[cnt] = rigid.frame;
 
 		//mutex
-		tracker->mutex.lock();
-		std::memcpy(pose, rigid.pose, sizeof(float)*POSE_SIZE);
-		tracker->mutex.unlock();
+		track->mutex.lock();
+		std::memcpy(track->pose, rigid.pose, sizeof(float)*POSE_SIZE);
+		track->mutex.unlock();
 
-		usleep(500);
+		usleep(1000);
+		count ++;
 	}
 
 	owlDone();
+	printf("Phasespace loop ran %d times.\n", count);
 
 	return 0;
 }

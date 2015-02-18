@@ -14,7 +14,7 @@ INCLUDE_DIRS = -I../../include -I../../../Framework/include -I../../../SDK/phase
 CXX = g++
 #CXXFLAGS += -g -DLINUX -Wall $(INCLUDE_DIRS)
 #CXXFLAGS += -O0 -DDEBUG -DLINUX -Wall $(INCLUDE_DIRS)
-CXXFLAGS += -O2 -DLINUX -Wall $(INCLUDE_DIRS)
+CXXFLAGS += -O2 -DLINUX -Wall $(INCLUDE_DIRS) -std=c++11
 LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -L../../../SDK/phasespace/lib -lowlsock
 #LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options
 

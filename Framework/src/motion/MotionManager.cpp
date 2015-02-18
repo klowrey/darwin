@@ -303,7 +303,21 @@ void MotionManager::StopLogging()
 		m_LogFileStream<<fsr2newton(*it) << ","; it++;
 		m_LogFileStream<<fsr2newton(*it) << ","; it++;
 		m_LogFileStream<<fsr2newton(*it) << ","; it++;
-		m_LogFileStream<<fsr2newton(*it) << std::endl;
+		m_LogFileStream<<fsr2newton(*it) ; // << std::endl;
+
+		if (MotionStatus::PHASESPACE_ON) {
+			m_LogFileStream<< ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << ","; it++;
+			m_LogFileStream<< (*it)/1000000.0 << std::endl;
+		}
+		else {
+			m_LogFileStream<< std::endl;
+		}
 	}
 
 	printf("done!\n");
@@ -544,12 +558,12 @@ void MotionManager::Process()
 		m_streamBuffer.push_back(fsr2newton(m_CM730->m_BulkReadData[FSR::ID_R_FSR].ReadWord(FSR::P_FSR1_L)));
 
 		/*
-		if (MotionStatus::PHASESPACE_ON) {
-			for(int id = 0; id < 7; id++) { // Phasespace
-				m_streamBuffer.push_back(MotionStatus::PS_DATA[id]);
-			}
-		}
-		*/
+		   if (MotionStatus::PHASESPACE_ON) {
+		   for(int id = 0; id < 7; id++) { // Phasespace
+		   m_streamBuffer.push_back(MotionStatus::PS_DATA[id]);
+		   }
+		   }
+		   */
 
 		if (data_sock.valid())
 		{
@@ -596,8 +610,6 @@ void MotionManager::Process()
 		for(int id = 19; id <= 20; id++) { // Head Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_POSITION_L));
 		}
-		//printf("\tAgain: %d %d\n", m_CM730->m_BulkReadData[14].ReadWord(MX28::P_P_GAIN),
-		//		m_CM730->m_BulkReadData[14].ReadWord(MX28::P_PRESENT_POSITION_L));
 
 		for(int id = 1; id <= 17; id+=2) { // Right Joints
 			m_logBuffer.push_back(m_CM730->m_BulkReadData[id].ReadWord(MX28::P_PRESENT_SPEED_L));
@@ -631,7 +643,7 @@ void MotionManager::Process()
 			for(int id = 0; id < 7; id++) { // Phasespace
 				// above Process() call puts the newest phasespace data into
 				// PS_DATA in MotionStatus
-				m_logBuffer.push_back(MotionStatus::PS_DATA[id]);
+				m_logBuffer.push_back((int)(MotionStatus::PS_DATA[id]*1000000));
 			}
 		}
 

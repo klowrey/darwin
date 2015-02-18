@@ -7,6 +7,7 @@
 
 #include <string.h>
 
+#include <mutex>
 #include "MotionModule.h"
 
 #define POSE_SIZE 7
@@ -24,7 +25,7 @@ namespace Robot
 			bool m_Initialized;
 
 			Phasespace();
-			void owl_print_error();
+			void owl_print_error(const char *s, int n);
 			float pose[POSE_SIZE];
 
 		protected:
@@ -37,7 +38,7 @@ namespace Robot
 
 			void Initialize();
 			void Process();
-			bool IsRunnting();
+			bool IsRunning(void);
 	};
 }
 

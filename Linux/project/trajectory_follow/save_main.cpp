@@ -40,79 +40,7 @@ int _getch()
 	return ch;
 }
 
-/*
-double accel_g(int accel) {
-	return ((accel-512) / 128.0); // in m/s^2
-}
-double gyro_radps(int gyro) {
-	return (gyro-512)*0.017453229251;
-}
-*/
-
 volatile bool ready = false;
-//volatile bool quit_ps= false;
-
-/*
-void owl_print_error(const char *s, int n)
-{
-	if(n < 0) printf("%s: %d\n", s, n);
-	else if(n == OWL_NO_ERROR) printf("%s: No Error\n", s);
-	else if(n == OWL_INVALID_VALUE) printf("%s: Invalid Value\n", s);
-	else if(n == OWL_INVALID_ENUM) printf("%s: Invalid Enum\n", s);
-	else if(n == OWL_INVALID_OPERATION) printf("%s: Invalid Operation\n", s);
-	else printf("%s: 0x%x\n", s, n);
-}
-
-void* ps_thread(void* ptr)
-{
-	// Init Phasespace Marker Tracking
-	OWLRigid rigid;
-	int tracker;
-	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
-		printf("Couldn't connect to Phase Space\n");
-		return 0;
-	}
-	// create tracker 0
-	tracker = 0;
-	owlTrackeri(tracker, OWL_CREATE, OWL_RIGID_TRACKER);
-	for (int i = 0; i < MARKER_COUNT; i++) {
-		owlMarkeri(MARKER(tracker, i), OWL_SET_LED, i);
-		owlMarkerfv(MARKER(tracker, i), OWL_SET_POSITION, RIGID_BODY[i]);
-	}
-	owlTracker(tracker, OWL_ENABLE);
-	if (!owlGetStatus()) {
-		owl_print_error("error in point tracker setup", owlGetError());
-		return 0;
-	}
-	owlSetFloat(OWL_FREQUENCY, OWL_MAX_FREQUENCY);
-	owlSetInteger(OWL_STREAMING, OWL_ENABLE);
-
-	std::ofstream out("TEST.txt");
-	while (quit_ps == false) {
-		int nrigid = owlGetRigids(&rigid, 1);
-
-		// check for error
-		int err;
-		if ((err = owlGetError()) != OWL_NO_ERROR) {
-			owl_print_error("error", err);
-			return 0;
-		}
-
-		// make sure we got a new frame
-		if( nrigid<1 )
-			continue;
-
-				out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
-					<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
-					<<rigid.pose[6]<<std::endl;
-		usleep(500);
-	}
-
-	owlDone();
-	
-	return 0;
-}
-*/
 
 void* walk_thread(void* ptr)
 {
@@ -378,8 +306,6 @@ void set_positions(double percent, double* interp) {
 	MotionStatus::m_CurrentJoints.SetValue(id, radian2joint(interp[id]));
 	MotionStatus::m_CurrentJoints.SetEnable(id, true);
 	joint_num++;
-
-	printf("Joint: [14] %f\n", interp[14]);
 }
 
 
@@ -416,7 +342,6 @@ int main(int argc, char* argv[])
 			("p_gain,p", po::value<int>(&p_gain)->default_value(20), "P gain of PiD controller, 2-160")
 			("i_gain,i", po::value<int>(&i_gain)->default_value(0), "I gain of PiD controller, 0-32")
 			("d_gain,d", po::value<int>(&d_gain)->default_value(0), "D gain of PiD controller, 0-32")
-
 			;
 
 		po::variables_map vm;
@@ -473,8 +398,12 @@ int main(int argc, char* argv[])
 
 	//MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
 	//MotionManager::GetInstance()->AddModule((MotionModule*)Walking::GetInstance());
-	MotionManager::GetInstance()->AddModule((MotionModule*)Phasespace::GetInstance());
 	//LinuxMotionTimer *motion_timer = new LinuxMotionTimer(MotionManager::GetInstance());
+	if (use_ps) {
+		printf("Using Phasespace\n\tLoading Phasespace Module...");
+		MotionManager::GetInstance()->AddModule((MotionModule*)Phasespace::GetInstance());
+		printf(" Done.\n");
+	}
 	//motion_timer->Start();
 	/////////////////////////////////////////////////////////////////////
 
@@ -545,10 +474,7 @@ int main(int argc, char* argv[])
 	pthread_t thread_t;
 	pthread_create(&thread_t, NULL, walk_thread, NULL);
 
-	//pthread_t phasespace_t;
-	//if (use_ps) {
-	//	pthread_create(&phasespace_t, NULL, ps_thread, NULL);
-	//}
+	
 
 	ready = false;
 	while (!ready)
@@ -617,7 +543,7 @@ int main(int argc, char* argv[])
 					double diff = joint_data[idx] - prev_joint[idx];
 					interp[idx] = prev_joint[idx] + percent*diff;
 				}
-				printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[14], interp[14], joint_data[14]);
+				//printf("%1.3f -- %1.3f -- %1.3f\n", prev_joint[14], interp[14], joint_data[14]);
 
 				double gyro_x = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L));
 				double gyro_y = -1*gyro2rads_ps(cm730.m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L));
@@ -714,14 +640,14 @@ int main(int argc, char* argv[])
 				}
 
 				/*
-				out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
-					<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
-					<<rigid.pose[6]<<","
-					<<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
-					*/
+				   out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
+				   <<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
+				   <<rigid.pose[6]<<","
+				   <<quat.q0<<","<<quat.q1<<","<<quat.q2<<","<<quat.q3<<std::endl;
+				   */
 				//out<<gyro_x<<","<<gyro_y<<","<<gyro_z<<","
 				//<<accel_x<<","<<accel_y<<","<<accel_z<<","
-				
+
 				//if (cm730.BulkRead() == CM730::SUCCESS) { }
 
 				MotionManager::GetInstance()->Process(); // does the logging, and bulk read, and grabbing phasespace
@@ -740,29 +666,22 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	/*
-	if (use_ps) { 
-		quit_ps = true;
-		//pthread_join(phasespace_t, NULL);
-	}
-	*/
-	
 	// Must remove Phasespace to stop the separate thread
-	MotionManager::GetInstance()->RemoveModule((MotionModule*)Phasespace::GetInstance());
-
 	clock_gettime(CLOCK_MONOTONIC, &final_time);
 	printf("Trajectory took %f seconds\n", sec_diff(start_time, final_time));
 
-	printf("Streaming Started. Press SPACE to play trajectory\n");
+	/*
+	   printf("Streaming Started. Press SPACE to play trajectory\n");
 
-	//pthread_t thread_t;
-	//pthread_create(&thread_t, NULL, walk_thread, NULL);
+	   pthread_t thread_t;
+	   pthread_create(&thread_t, NULL, walk_thread, NULL);
 
-	//while (!ready)
-	//{
-	//	MotionManager::GetInstance()->Process();
-	//}
-	//pthread_join(thread_t, NULL);
+	   while (!ready)
+	   {
+	   MotionManager::GetInstance()->Process();
+	   }
+	   pthread_join(thread_t, NULL);
+	   */
 
 
 	if (MotionManager::GetInstance()->IsLogging() == true) {
@@ -770,6 +689,12 @@ int main(int argc, char* argv[])
 		MotionManager::GetInstance()->StopLogging();
 		printf("Done.\n");
 	}
+
+	if (use_ps) { 
+		MotionManager::GetInstance()->RemoveModule((MotionModule*)Phasespace::GetInstance());
+		delete Phasespace::GetInstance();
+	}
+
 
 	free(binary_line);
 	free(interp);

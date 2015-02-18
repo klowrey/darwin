@@ -13,9 +13,9 @@ ARFLAGS = cr
 
 TARGET = darwin.a
 
-INCLUDE_DIRS = -I../include -I../../Framework/include
+INCLUDE_DIRS = -I../include -I../../Framework/include -I../../SDK/
 
-CXXFLAGS += -O2 -DLINUX -Wall -shared $(INCLUDE_DIRS)
+CXXFLAGS += -O2 -DLINUX -Wall -shared $(INCLUDE_DIRS) -std=c++11
 #CXXFLAGS += -O2 -DDEBUG -DLINUX -Wall -shared $(INCLUDE_DIRS)
 LFLAGS += -lpthread -ldl
 
@@ -32,6 +32,7 @@ OBJS =  ../../Framework/src/MX28.o     	\
         ../../Framework/src/motion/modules/Action.o \
         ../../Framework/src/motion/modules/Head.o   \
         ../../Framework/src/motion/modules/Walking.o\
+        ../../Framework/src/motion/modules/Phasespace.o\
         ../../Framework/src/vision/BallFollower.o   \
         ../../Framework/src/vision/BallTracker.o    \
         ../../Framework/src/vision/ColorFinder.o    \
