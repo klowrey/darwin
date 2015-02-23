@@ -8,6 +8,9 @@
 //#include "Kinematics.h"
 #include "MotionStatus.h"
 #include <cstring>
+#include <chrono>
+#include <thread>
+#include <iostream>
 #include "Phasespace.h"
 
 using namespace Robot;
@@ -113,6 +116,7 @@ void* Phasespace::PhasespaceProc(void* param)
 	Phasespace *track = (Phasespace *)param;
 
 	OWLRigid rigid;
+	OWLMarker markers[32];
 	int tracker;
 	if (owlInit(PS_SERVER_NAME, INIT_FLAGS) < 0) {
 		printf("Couldn't connect to Phase Space\n");
@@ -144,7 +148,9 @@ void* Phasespace::PhasespaceProc(void* param)
 	*/
 
 	int count=0;
+	std::chrono::milliseconds interval(1);
 	while (!track->m_FinishTracking) {
+		int nmarker = owlGetMarkers(markers, 32);
 		int nrigid = owlGetRigids(&rigid, 1);
 
 		// check for error
@@ -155,23 +161,31 @@ void* Phasespace::PhasespaceProc(void* param)
 		}
 
 		// make sure we got a new frame
-		if( nrigid<1 )
+		if( nrigid<1 ) {
+			//printf("No new frame...\n");
+			std::this_thread::sleep_for(interval);
 			continue;
+		}
 
-		//out<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
-		//	<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
-		//	<<rigid.pose[6]<<std::endl;
+		//if (count%100 == 0) {
+		//	std::cout<<"Raw:: "<<rigid.pose[0]<<","<<rigid.pose[1]<<","<<rigid.pose[2]<<","
+		//		<<rigid.pose[3]<<","<<rigid.pose[4]<<","<<rigid.pose[5]<<","
+		//		<<rigid.pose[6]<<std::endl;
+		//}
+
 		//	there's potentially stuff we can do with the cond and frame
 		//cond[cnt] = rigid.cond;
 		//frame[cnt] = rigid.frame;
 
-		//mutex
-		track->mutex.lock();
-		std::memcpy(track->pose, rigid.pose, sizeof(float)*POSE_SIZE);
-		track->mutex.unlock();
+		// mutex; if locked, forget this and grab next data point
+		if (track->mutex.try_lock()) {
+			std::memcpy(track->pose, rigid.pose, sizeof(float)*POSE_SIZE);
+			track->pose[7] = rigid.cond;
+			track->mutex.unlock();
+		}
 
-		usleep(1000);
-		count ++;
+		count++;
+		std::this_thread::sleep_for(interval);
 	}
 
 	owlDone();
@@ -182,6 +196,7 @@ void* Phasespace::PhasespaceProc(void* param)
 
 void Phasespace::Initialize()
 {
+	std::cout<<"Initialized Phasespace Module"<<std::endl;
 	if (this->m_TrackerRunning)
 		this->m_Initialized = true;
 }
@@ -191,7 +206,11 @@ void Phasespace::Process()
 	// Copy most recent? Copy the average?
 	if(this->m_TrackerRunning && this->m_Initialized)
 	{
-		this->mutex.lock();
+		//std::cout<<"Copying: "<<pose[0]<<","<<pose[1]<<","<<pose[2]<<","
+		//	<<pose[3]<<","<<pose[4]<<","<<pose[5]<<","
+		//  	<<pose[6]<<std::endl;
+
+		this->mutex.lock(); // not a try; wait for newest
 		//std::memcpy(MotionStatus::PS_DATA, pose, sizeof(float) * POSE_SIZE);
 		for (int i=0; i<POSE_SIZE; i++) {
 			MotionStatus::PS_DATA[i] = (double)pose[i];

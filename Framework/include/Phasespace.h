@@ -11,6 +11,7 @@
 #include "MotionModule.h"
 
 #define POSE_SIZE 7
+#define COND_SIZE 1
 
 namespace Robot
 {
@@ -26,7 +27,7 @@ namespace Robot
 
 			Phasespace();
 			void owl_print_error(const char *s, int n);
-			float pose[POSE_SIZE];
+			float pose[POSE_SIZE+COND_SIZE];
 
 		protected:
 			static void *PhasespaceProc(void *param);

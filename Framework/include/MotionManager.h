@@ -76,6 +76,7 @@ namespace Robot
 
 			void ResetGyroCalibration() { m_CalibrationStatus = 0; m_FBGyroCenter = 512; m_RLGyroCenter = 512; }
 			int GetCalibrationStatus() { return m_CalibrationStatus; }
+			void SetCalibrationStatus(int status) {m_CalibrationStatus = status; }
 			void SetJointDisable(int index);
 
 			void StartStreaming();

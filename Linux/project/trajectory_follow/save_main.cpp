@@ -396,15 +396,11 @@ int main(int argc, char* argv[])
 	}
 	cm730.MakeBulkReadPacketMPC();
 
-	//MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
-	//MotionManager::GetInstance()->AddModule((MotionModule*)Walking::GetInstance());
-	//LinuxMotionTimer *motion_timer = new LinuxMotionTimer(MotionManager::GetInstance());
 	if (use_ps) {
 		printf("Using Phasespace\n\tLoading Phasespace Module...");
 		MotionManager::GetInstance()->AddModule((MotionModule*)Phasespace::GetInstance());
 		printf(" Done.\n");
 	}
-	//motion_timer->Start();
 	/////////////////////////////////////////////////////////////////////
 
 	//int param[JointData::NUMBER_OF_JOINTS * MX28::PARAM_BYTES];
@@ -453,6 +449,7 @@ int main(int argc, char* argv[])
 
 	if (engage) {
 		MotionManager::GetInstance()->SetEnable(true);
+		MotionManager::GetInstance()->SetCalibrationStatus(1);
 	}
 
 	int max_speed = 1023;

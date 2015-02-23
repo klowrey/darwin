@@ -498,7 +498,6 @@ void MotionManager::Process()
 
 		if(joint_num > 0) {
 			m_CM730->SyncWrite(MX28::P_D_GAIN, MX28::PARAM_BYTES, joint_num, param);
-			//printf("ID[%d] : gain %d, %d %d \n", param[13*MX28::PARAM_BYTES], MotionStatus::m_CurrentJoints.GetPGain(14), param[13*MX28::PARAM_BYTES+5], joint_num);
 		}
 	}
 

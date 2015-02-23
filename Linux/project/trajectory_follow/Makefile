@@ -20,7 +20,7 @@ LFLAGS += -lpthread -ljpeg -lrt -lboost_program_options -L../../../SDK/phasespac
 
 OBJECTS =   main.o 
 
-all: $(TARGET) logger test
+all: $(TARGET) logger test debug_ps
 
 clean:
 	rm -f *.a *.o $(TARGET) core *~ *.so *.lo
@@ -48,6 +48,11 @@ test: darwin.a test_main.o
 ps_logger: darwin.a ps_main.o 
 	$(CXX) $(CFLAGS) ps_main.o ../../lib/darwin.a -o ps_logger $(LFLAGS)
 	chmod 755 ps_logger 
+
+debug_ps: darwin.a debug_ps.o 
+	$(CXX) $(CFLAGS) debug_ps.o ../../lib/darwin.a -o debug_ps $(LFLAGS)
+	chmod 755 debug_ps 
+
 
 # useful to make a backup "make tgz"
 tgz: clean
