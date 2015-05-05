@@ -447,12 +447,12 @@ int main(int argc, char* argv[])
 	printf("Press ENTER if happy with initial pose!\n");
 	getchar();
 
+	MotionManager::GetInstance()->SetCalibrationStatus(1);
 	if (engage) {
 		MotionManager::GetInstance()->SetEnable(true);
-		MotionManager::GetInstance()->SetCalibrationStatus(1);
 	}
 
-	int max_speed = 1023;
+	int max_speed = 512;
 	for (int joint=JointData::ID_R_SHOULDER_PITCH; joint<JointData::NUMBER_OF_JOINTS; joint++) {
 		cm730.WriteByte(joint, MX28::P_P_GAIN, p_gain, 0);
 		cm730.WriteByte(joint, MX28::P_I_GAIN, i_gain, 0);
